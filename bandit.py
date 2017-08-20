@@ -1,5 +1,6 @@
 import tensorflow as tf
-import numpy as numpy
+import numpy as np
+import sys
 
 
 # Defining variables
@@ -13,7 +14,7 @@ e = 0.1
 # and A is the reward for that action above the baseline
 
 
-bandits = [0.2 0.8 -0.2 0.6]
+bandits = [0.2,0.8,-0.2,0.6]
 
 # We would like to generate the reward that will be more for 
 # more positive number. So, out function can be a random function
@@ -40,8 +41,11 @@ sugg_move = tf.argmax(weights,0)
 curr_move = tf.placeholder(shape=[1],dtype=tf.int32)
 curr_reward = tf.placeholder(shape=[1],dtype=tf.float32)
 
+print(curr_move.shape)
 
-loss = -tf.log(weights[curr_move])*curr_reward
+
+loss = -tf.log(weights[curr_move[0]])*curr_reward
+# sys.exit()
 
 optimizer = tf.train.AdamOptimizer(0.001, beta1=0.5)
 loss_optimizer = optimizer.minimize(loss)
@@ -54,7 +58,7 @@ with tf.Session() as sess:
 
 	sess.run(init)
 
-	for step in range(max_steps):
+	for step in range(1000):
 
 		temp = np.random.random(1)
 
@@ -63,9 +67,14 @@ with tf.Session() as sess:
 		else :
 			action = np.random.randint(len(bandits), size=1)
 
-		reward = reward_bandit(action)
+		reward = reward_bandit(action[0])
 
-		sess.run([loss_optimizer], feed_dict={curr_move:action , curr_reward:reward})
+		_, temp_weight = sess.run([loss_optimizer, weights], feed_dict={curr_move:action , curr_reward:[reward]})
+
+		if(step%10 == 0) :
+
+			print(temp_weight)
+			
 
 
 
