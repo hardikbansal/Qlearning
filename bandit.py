@@ -5,7 +5,7 @@ import sys
 
 # Defining variables
 
-e = 0.1
+e = 0.5
 
 # Here we will be learning the Policy gradient method
 
@@ -36,7 +36,7 @@ def reward_bandit(index):
 # tensorflow graph.
 
 
-weights = tf.get_variable("weights",[len(bandits)])
+weights = tf.Variable(tf.ones([len(bandits)]), name="weights")
 sugg_move = tf.argmax(weights,0)
 curr_move = tf.placeholder(shape=[1],dtype=tf.int32)
 curr_reward = tf.placeholder(shape=[1],dtype=tf.float32)
@@ -71,9 +71,9 @@ with tf.Session() as sess:
 
 		_, temp_weight = sess.run([loss_optimizer, weights], feed_dict={curr_move:action , curr_reward:[reward]})
 
-		if(step%10 == 0) :
+		# if(step%10 == 0) :
 
-			print(temp_weight)
+		print(temp_weight)
 			
 
 
