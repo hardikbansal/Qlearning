@@ -5,7 +5,7 @@ import sys
 
 # Defining variables
 
-e = 0.5
+e = 0.1
 
 # Here we will be learning the Policy gradient method
 
