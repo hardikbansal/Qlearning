@@ -27,14 +27,23 @@ class  contextual_bandits(object):
 
 		input_state = tf.placeholder([self.num_bandits], tf.int32)
 
-		weights = tf.Variable(tf.ones([self.num_bandits, self.num_hands]))
+		self.weights = tf.Variable(tf.ones([self.num_bandits, self.num_hands]))
 
-		output_weights = tf.matmul(input_state,weights)
+		output_weights = tf.matmul(input_state,self.weights)
 		output_move = tf.max(output_weights)
 
 	def loss_setup():
 
+		curr_move = tf.placeholder(shape=[1],dtype=tf.int32)
+		curr_reward = tf.placeholder(shape=[1],dtype=tf.float32)
+		curr_state = tf.placeholder(shape=[1],dtype=tf.int32)
 		
+		loss = -tf.log(self.weights[curr_state, curr_move])*curr_reward
+
+		optimizer = tf.train.AdamOptimizer(0.001, beta1=0.5)
+		loss_optimizer = optimizer.minimize(loss)
+
+
 
 
 	def train():
@@ -55,7 +64,17 @@ class  contextual_bandits(object):
 				temp = np.random.uniform(0,1)
 
 				if temp > e:
-					action = sess.run([output_move], feed_dict={input_state = state})
+					action = sess.run([output_move], feed_dict:{input_state = state})
 				else:
 					action = np.random.randint(self.num_hands,size=1)
+
+				reward = self.get_reward(state, action[0])
+
+
+				_, temp_weight = sess.run([loss_optimizer, self.weights] , feed_dict={curr_state:[state], curr_move:action, curr_reward:reward})
+
+
+				print(temp_weight)
+
+
 
