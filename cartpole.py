@@ -3,6 +3,8 @@
 import tensorflow as tf
 import numpy as np
 
+from layers import *
+
 import gym
 
 
@@ -14,11 +16,18 @@ class cartpole():
 	def __init__(self):
 
 		self.state = 0
+		self.state_size = 4
+		self.action_size = 2
 
 
 	def model_setup(self):
 
-		return 1
+		self.state_in = tf.placeholder(dtype=tf.int32, shape=[self.state_size])
+
+		temp_states = linear1d(self.state_in, self.state_size, self.action_size)
+
+		state_out = tf.argmax(temp_states)
+
 
 
 	def loss_setup(self):
