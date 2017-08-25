@@ -1,5 +1,9 @@
 # Simple Policy based agent for Cartpole
 
+# Discounted Rewards are used instead of just current rewards
+
+# For that we need to store the previous actions with weighted rewards
+
 import tensorflow as tf
 import numpy as np
 
@@ -22,15 +26,15 @@ class cartpole():
 
 	def model_setup(self):
 
-		self.state_in = tf.placeholder(dtype=tf.int32, shape=[self.state_size])
-
+		self.state_in = tf.placeholder(dtype=tf.int32, shape=[None, self.state_size])
 		temp_states = linear1d(self.state_in, self.state_size, self.action_size)
-
-		state_out = tf.argmax(temp_states)
-
+		self.action = tf.argmax(temp_states)
 
 
 	def loss_setup(self):
+
+		self.curr_action = tf.placeholder(dtype=tf.int32, shape=[1])
+		self.curr_reward = tf.placeholder(dtype=tf.float32, shape=[1])
 
 		return 1
 
@@ -46,6 +50,18 @@ class cartpole():
 
 		with tf.Session() as sess:
 
+			sess.run(init)
+
+			for i in range(episodes):
+
+				temp = np.random.uniform(1)
+
+				if temp > e :
+					temp_action = sess.run(self.action, feed_dict={self.state_in:curr_state})
+				else :
+					temp_action = np.random.randint(2, size=[1])
+
+				news_state, reward, done, _ = env.step(temp_action[0])
 
 def main():
 
