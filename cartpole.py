@@ -33,8 +33,13 @@ class cartpole():
 
 	def loss_setup(self):
 
-		self.curr_action = tf.placeholder(dtype=tf.int32, shape=[1])
-		self.curr_reward = tf.placeholder(dtype=tf.float32, shape=[1])
+		self.action_hist = tf.placeholder(dtype=tf.int32, shape=[None])
+		self.reward_hist = tf.placeholder(dtype=tf.float32, shape=[None])
+
+		self.loss = tf.reduce_mean(tf.loss())
+
+
+
 
 		return 1
 
@@ -54,14 +59,19 @@ class cartpole():
 
 			for i in range(episodes):
 
-				temp = np.random.uniform(1)
+				for j in range(max_iter):
 
-				if temp > e :
-					temp_action = sess.run(self.action, feed_dict={self.state_in:curr_state})
-				else :
-					temp_action = np.random.randint(2, size=[1])
+					temp = np.random.uniform(1)
 
-				news_state, reward, done, _ = env.step(temp_action[0])
+					if temp > e :
+						temp_action = sess.run(self.action, feed_dict={self.state_in:curr_state})
+					else :
+						temp_action = np.random.randint(2, size=[1])
+
+					news_state, reward, done, _ = env.step(temp_action[0])
+
+					if(done):
+						break
 
 def main():
 
