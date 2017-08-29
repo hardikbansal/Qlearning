@@ -30,6 +30,7 @@ class cartpole():
 		self.max_iter = 10
 		self.num_episodes = 1
 		self.e = 0.1
+		self.lr = 0.001
 
 
 	def model_setup(self):
@@ -56,6 +57,14 @@ class cartpole():
 		self.loss = tf.reduce_mean(-tf.log(temp_weights)*reward_hist)
 
 		# Calculating the gradients in tensorflow
+
+
+		var_list = tf.trainable_variables()
+
+		self.gradients = tf.gradients(self.loss, var_list)
+
+		self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
+
 
 
 
