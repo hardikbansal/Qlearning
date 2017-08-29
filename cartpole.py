@@ -27,8 +27,8 @@ class cartpole():
 
 		# An action denote the force of magnitude 1 in the left or right direction corresponding to 0/1
 		self.action_size = 2
-		self.max_iter = 99
-		self.num_episodes = 1000
+		self.max_iter = 10
+		self.num_episodes = 1
 		self.e = 0.1
 
 
@@ -73,7 +73,6 @@ class cartpole():
 
 			for i in range(self.num_episodes):
 
-				history = np.array([])
 				curr_state = env.reset()
 
 				for j in range(self.max_iter):
@@ -86,12 +85,18 @@ class cartpole():
 						temp_action = np.random.randint(self.action_size, size=[1])
 
 					new_state, reward, done, _ = env.step(temp_action[0])
-					history = np.append(history, np.array([temp_action, curr_state, new_state, reward]))
+
+					if (j == 0):
+						history = np.array([[temp_action, curr_state, new_state, reward]])
+					else:
+						history = np.insert(history, history.shape[0], np.array([temp_action, curr_state, new_state, reward]), axis=0)
+
+					temp_grad = sess.run(self.gradients, feed_dict={self.state_in:np.reshape(history[:,2],[-1, self.state_size])})
 
 
 					print(history.shape)
 
-					sys.exit()
+					# sys.exit()
 
 					# Here I am applying the gradients after some fixed number of steps.
 
