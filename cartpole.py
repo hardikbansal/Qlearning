@@ -47,14 +47,14 @@ class cartpole():
 
 	def loss_setup(self):
 
-		action_hist = tf.placeholder(dtype=tf.int32, shape=[None,self.action_size])
-		reward_hist = tf.placeholder(dtype=tf.float32, shape=[None])
+		self.action_hist = tf.placeholder(dtype=tf.int32, shape=[None,self.action_size])
+		self.reward_hist = tf.placeholder(dtype=tf.float32, shape=[None])
 
 		# Caclulation the temp weight by taking the weights corresponding action that we got earlier in the stage
 
-		temp_weights = tf.reduce_sum(self.prob_action*tf.cast(action_hist, tf.float32), 1)
+		temp_weights = tf.reduce_sum(self.prob_action*tf.cast(self.action_hist, tf.float32), 1)
 
-		self.loss = tf.reduce_mean(-tf.log(temp_weights)*reward_hist)
+		self.loss = tf.reduce_mean(-tf.log(temp_weights)*self.reward_hist)
 
 		# Calculating the gradients in tensorflow
 
@@ -62,6 +62,9 @@ class cartpole():
 		var_list = tf.trainable_variables()
 
 		self.gradients = tf.gradients(self.loss, var_list)
+
+
+		# Defining the optimizer for updating the network
 
 		self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
 
@@ -95,12 +98,26 @@ class cartpole():
 
 					new_state, reward, done, _ = env.step(temp_action[0])
 
+					# print(curr_state.shape)
+
 					if (j == 0):
 						history = np.array([[temp_action, curr_state, new_state, reward]])
 					else:
 						history = np.insert(history, history.shape[0], np.array([temp_action, curr_state, new_state, reward]), axis=0)
 
-					temp_grad = sess.run(self.gradients, feed_dict={self.state_in:np.reshape(history[:,2],[-1, self.state_size])})
+					# print(history)
+					print(np.vstack(history[:,0]).flatten())
+
+
+
+
+					temp_grad = sess.run(self.gradients, feed_dict={self.state_in:np.vstack(history[:,1]), self.reward_hist:history[:,3], self.action_hist:np.eye(self.action_size)[np.vstack(history[:,0]).flatten()] })
+					# sys.exit()
+
+					for xs, grad_xs in temp_grad:
+						print(xs, grad_xs)
+
+					sys.exit()
 
 
 					print(history.shape)
