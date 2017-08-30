@@ -7,7 +7,7 @@ def linear1d(inputlin, inputdim, outputdim, name="linear1d", std=0.02, use_bias=
 
     with tf.variable_scope(name) as scope:
 
-        weight = tf.get_variable("weight",[inputdim, outputdim])
+        weight = tf.get_variable("weight",[inputdim, outputdim], dtype=np.float32, initializer=tf.constant_initializer(1.0))
         bias = tf.get_variable("bias",[outputdim], dtype=np.float32, initializer=tf.constant_initializer(0.0))
 
         if use_bias:
