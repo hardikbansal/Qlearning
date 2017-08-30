@@ -31,6 +31,7 @@ class cartpole():
 		self.num_episodes = 1
 		self.e = -0.1
 		self.lr = 0.001
+		self.batch_size = 5
 
 
 	def model_setup(self):
@@ -47,8 +48,8 @@ class cartpole():
 
 	def loss_setup(self):
 
-		self.action_hist = tf.placeholder(dtype=tf.int32, shape=[None,self.action_size])
-		self.reward_hist = tf.placeholder(dtype=tf.float32, shape=[None])
+		self.action_hist = tf.placeholder(dtype=tf.int32, shape=[None,self.action_size], name="action_hist")
+		self.reward_hist = tf.placeholder(dtype=tf.float32, shape=[None],name="reward_hist")
 
 		# Caclulation the temp weight by taking the weights corresponding action that we got earlier in the stage
 
@@ -64,12 +65,14 @@ class cartpole():
 		# for i in var_list:
 		# 	print (i)
 
-		self.gradients = tf.gradients(self.loss, var_list)
-
-
 		# Defining the optimizer for updating the network
 
-		self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
+		optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
+		self.gradients = optimizer.compute_gradients(self.loss, var_list)
+
+		self.grad_placeholder = [(tf.placeholder("float", shape=grad[1].get_shape()), grad[1]) for grad in self.gradients]
+
+		self.update_batch = optimizer.apply_gradients(self.grad_placeholder)
 
 
 
@@ -118,8 +121,6 @@ class cartpole():
 
 					# print(temp_grad)
 
-
-
 					for xs,grad_xs in enumerate(temp_grad):
 						
 						if(j%self.batch_size==1):
@@ -131,18 +132,16 @@ class cartpole():
 
 					if(j%self.batch_size == 0):
 
-						
+						feed_dict={}
+						for i in xrange(len(grad_hist)):
+							feed_dict[self.grad_placeholder[i][0]] = grad_hist[i]
+
+						_ = sess.run(self.update_batch, feed_dict={self.grad_placeholder:feed_dict})
 
 					sys.exit()
-
-
-					print(history.shape)
-
 					# sys.exit()
 
 					# Here I am applying the gradients after some fixed number of steps.
-
-
 					curr_state = new_state
 
 					if(done):
