@@ -70,7 +70,7 @@ class cartpole():
 		optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
 		self.gradients = optimizer.compute_gradients(self.loss, var_list)
 
-		self.grad_placeholder = [(tf.placeholder("float", shape=grad[1].get_shape()), grad[1]) for grad in self.gradients]
+		self.grad_placeholder = [(tf.placeholder(dtype=tf.float32, shape=grad[1].get_shape()), grad[1]) for grad in self.gradients]
 
 		self.update_batch = optimizer.apply_gradients(self.grad_placeholder)
 
@@ -92,8 +92,11 @@ class cartpole():
 			for i in range(self.num_episodes):
 
 				curr_state = env.reset()
+				grad_hist = [0]*len(self.grad_placeholder)
+				# print(len(self.grad_placeholder))
+				# sys.exit()
 
-				for j in range(self.max_iter):
+				for j in range(1,self.max_iter):
 
 					temp = np.random.uniform(1)
 
@@ -106,7 +109,7 @@ class cartpole():
 
 					# print("Temp probs on action is ", temp_prob_action, " on state ", curr_state)
 
-					if (j == 0):
+					if (j == 1):
 						history = np.array([[temp_action, curr_state, new_state, reward]])
 					else:
 						history = np.insert(history, history.shape[0], np.array([temp_action, curr_state, new_state, reward]), axis=0)
@@ -126,7 +129,7 @@ class cartpole():
 						if(j%self.batch_size==1):
 							grad_hist[xs] = grad_xs
 						else :
-							grad_hist[xs] += grad_xs
+							grad_hist[xs] = grad_hist[xs] + grad_xs
 						
 						# print(xs, grad_xs)
 
