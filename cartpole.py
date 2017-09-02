@@ -27,8 +27,8 @@ class cartpole():
 
 		# An action denote the force of magnitude 1 in the left or right direction corresponding to 0/1
 		self.action_size = 2
-		self.max_iter = 10
-		self.num_episodes = 1
+		self.max_iter = 99
+		self.num_episodes = 100
 		self.e = -0.1
 		self.lr = 0.001
 		self.batch_size = 5
@@ -127,21 +127,28 @@ class cartpole():
 					for xs,grad_xs in enumerate(temp_grad):
 						
 						if(j%self.batch_size==1):
-							grad_hist[xs] = grad_xs
+							grad_hist[xs] = grad_xs[0]
 						else :
-							grad_hist[xs] = grad_hist[xs] + grad_xs
+							grad_hist[xs] = grad_hist[xs] + grad_xs[0]
 						
-						# print(xs, grad_xs)
 
+					# print(grad_hist[0])
+					
 					if(j%self.batch_size == 0):
 
 						feed_dict={}
-						for i in xrange(len(grad_hist)):
+						# print()
+						for i in range(len(grad_hist)):
+							# print(grad_hist[i])
 							feed_dict[self.grad_placeholder[i][0]] = grad_hist[i]
 
-						_ = sess.run(self.update_batch, feed_dict={self.grad_placeholder:feed_dict})
+						# print(feed_dict)
 
-					sys.exit()
+						_ = sess.run(self.update_batch, feed_dict=feed_dict)
+
+						# sys.exit()
+
+					# sys.exit()
 					# sys.exit()
 
 					# Here I am applying the gradients after some fixed number of steps.
