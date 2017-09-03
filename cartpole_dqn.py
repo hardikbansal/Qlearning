@@ -29,7 +29,6 @@ class network():
 			output_weights = tf.nn.sigmoid(tf.matmul(self.input_state, weight_action))
 
 			self.out_action = tf.argmax(output_weights, 1)
-			self.out_reward = tf.matmul(self.input_state, weight_reward)
 			self.out_done = tf.matmul(self.input_state, weight_done)
 
 
@@ -45,6 +44,7 @@ class dqn():
 		self.num_episodes = 1000
 		self.max_steps = 200
 		self.pre_train_steps = 1000
+		self.batch_size = 20
 
 	def copy_network(self, net1, net2):
 
@@ -63,8 +63,16 @@ class dqn():
 		self.main_net.net()
 		self.target_net.net()
 
-		#Equating the wo networks in the start
+		# Defining the model for the training
 
+		self.target_reward = tf.placeholder(tf.float32, [None, 1], name="target_reward")
+
+		observed_reward = self.main_net.output_weights*tf.one_hot(self.main_net.out_action)
+
+		self.loss = tf.reduce_sum(tf.square(self.target_reward - observed_reward))
+
+		optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
+		optimizer.minimize(self.loss, lr=0.0001)
 
 
 	def train(self):
@@ -101,6 +109,17 @@ class dqn():
 						hist_buffer = np.insert(hist_buffer, hist_buffer.shape[0], np.array([temp_action, curr_state, new_state, reward, done]), axis=0)
 
 					# print(hist_buffer)
+
+
+					if(total_steps > self.pre_train_steps):
+
+						if(total_steps % self.update_freq == 0):
+
+							rand_batch = random.sample(hist_buffer, self.batch_size)
+
+							reward_hist = rand_batch[:,3]
+							action_hist = rand_batch[:,0]
+
 
 					if(total_steps == 0):
 						sys.exit()
