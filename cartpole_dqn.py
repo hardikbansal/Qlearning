@@ -22,7 +22,11 @@ class network():
 
 		with tf.variable_scope(self.name) as scope:
 
+			self.input_state = tf.placeholder(tf.float32, [-1, self.state_size], name="input_state")
+			weight_mat = tf.Variable(tf.ones(self.state_size, self.action_size),dtype=tf.float32)
+			output_weights = tf.nn.sigmoid(tf.matmul(self.input_state, weight_mat))
 
+			self.out_action = tf.argmax(self.output_weights, 1)
 
 
 
@@ -35,8 +39,15 @@ class dqn():
 
 	def model(self):
 
+		self.main_net = network(self.state_size, self.action_size, name="main_net")
+		self.target_net = network(self.state_size, self.action_size, name="target_net")
+
+		# Initialising the Networks
+		self.main_net.net()
+		self.target_net.net()
+
+		#Equating the wo networks in the start
+
+	def train(self):
+
 		
-
-
-
-

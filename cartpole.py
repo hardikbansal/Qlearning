@@ -39,7 +39,7 @@ class cartpole():
 		# Here we suppose that the network is a fully connected layer
 
 		self.state_in = tf.placeholder(dtype=tf.float32, shape=[None, self.state_size])
-		self.prob_action = linear1d(self.state_in, self.state_size, self.action_size)
+		self.prob_action = tf.nn.sigmoid(linear1d(self.state_in, self.state_size, self.action_size))
 		
 		# Taking the action based on the weights
 
