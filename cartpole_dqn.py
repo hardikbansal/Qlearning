@@ -42,6 +42,9 @@ class dqn():
 		self.action_size = action_size
 		self.eps = 0.1
 
+		self.num_episodes = 1000
+		self.max_steps = 200
+
 	def copy_network(self, net1, net2):
 
 		vars1 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, net1.name)
@@ -69,13 +72,27 @@ class dqn():
 		self.model()
 		init = tf.global_variables_initializer()
 
-		s = env.reset()
 
 		with tf.Session() as sess:
 
-			for i in range(num_episodes):
+			for i in range(self.num_episodes):
 
-				temp = np.random.random()
-				
-				if(temp > self.eps):
+				curr_state = env.reset()
+
+				for j in range(1, self.max_steps+1):
+
+					temp = np.random.random()
+					
+					if temp > self.e :
+							temp_action = sess.run([self.main_net.out_action], feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
+					else :
+						temp_action = np.random.randint(self.action_size, size=[1])
+
+					new_state, reward, done = env.step(a)
+
+					if(j == 1):
+						hist_buffer = np.array([[temp_action, curr_state, new_state, reward, done]])
+					else :
+						hist_buffer = np.insert(hist_buffer, hist_buffer.shape[0], np.array([temp_action, curr_state, new_state, reward, done]), axis=0)
+
 					
