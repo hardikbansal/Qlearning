@@ -66,8 +66,9 @@ class dqn():
 		# Defining the model for the training
 
 		self.target_reward = tf.placeholder(tf.float32, [None, 1], name="target_reward")
+		self.action_list = tf.placeholder(tf.float32, [None, 1], name="action_list")
 
-		observed_reward = self.main_net.output_weights*tf.one_hot(self.main_net.out_action)
+		observed_reward = self.main_net.output_weights*tf.one_hot(self.action_list)
 
 		self.loss = tf.reduce_sum(tf.square(self.target_reward - observed_reward))
 
@@ -118,6 +119,7 @@ class dqn():
 							rand_batch = random.sample(hist_buffer, self.batch_size)
 
 							reward_hist = rand_batch[:,3]
+							state_hist = rand_batch[:,1]
 							action_hist = rand_batch[:,0]
 
 
