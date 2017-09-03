@@ -22,13 +22,13 @@ class network():
 
 		with tf.variable_scope(self.name) as scope:
 
-			self.input_state = tf.placeholder(tf.float32, [-1, self.state_size], name="input_state")
-			weight_action = tf.Variable(tf.ones(self.state_size, self.action_size),dtype=tf.float32, name="weight_action")
-			weight_reward = tf.Variable(tf.ones(self.state_size, 1),dtype=tf.float32, name="weight_reward")
-			weight_done = tf.Variable(tf.ones(self.state_size, 1),dtype=tf.float32, name="weight_done")
+			self.input_state = tf.placeholder(tf.float32, [None, self.state_size], name="input_state")
+			weight_action = tf.Variable(tf.ones([self.state_size, self.action_size]), name="weight_action")
+			weight_reward = tf.Variable(tf.ones([self.state_size, 1]), name="weight_reward")
+			weight_done = tf.Variable(tf.ones([self.state_size, 1]), name="weight_done")
 			output_weights = tf.nn.sigmoid(tf.matmul(self.input_state, weight_action))
 
-			self.out_action = tf.argmax(self.output_weights, 1)
+			self.out_action = tf.argmax(output_weights, 1)
 			self.out_reward = tf.matmul(self.input_state, weight_reward)
 			self.out_done = tf.matmul(self.input_state, weight_done)
 
@@ -44,6 +44,7 @@ class dqn():
 
 		self.num_episodes = 1000
 		self.max_steps = 200
+		self.pre_train_steps = 1000
 
 	def copy_network(self, net1, net2):
 
@@ -51,7 +52,7 @@ class dqn():
 		vars2 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, net2.name)
 
 		for idx in range(len(vars1)):
-			vars2[idx].assign(val).eval()
+			vars2[idx].assign(vars1[idx])
 
 	def model(self):
 
@@ -64,7 +65,6 @@ class dqn():
 
 		#Equating the wo networks in the start
 
-		copy_network(self.main_net, self.target_net)
 
 
 	def train(self):
@@ -75,6 +75,11 @@ class dqn():
 
 		with tf.Session() as sess:
 
+			sess.run(init)
+			self.copy_network(self.main_net, self.target_net)
+			
+			total_steps = 0
+
 			for i in range(self.num_episodes):
 
 				curr_state = env.reset()
@@ -83,16 +88,31 @@ class dqn():
 
 					temp = np.random.random()
 					
-					if temp > self.e :
-							temp_action = sess.run([self.main_net.out_action], feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
-					else :
+					if temp < self.eps or total_steps < self.pre_train_steps:
 						temp_action = np.random.randint(self.action_size, size=[1])
+					else :
+						temp_action = sess.run([self.main_net.out_action], feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
 
-					new_state, reward, done = env.step(a)
+					new_state, reward, done, _ = env.step(temp_action[0])
 
-					if(j == 1):
+					if(total_steps == 0):
 						hist_buffer = np.array([[temp_action, curr_state, new_state, reward, done]])
 					else :
 						hist_buffer = np.insert(hist_buffer, hist_buffer.shape[0], np.array([temp_action, curr_state, new_state, reward, done]), axis=0)
 
-					
+					# print(hist_buffer)
+
+					if(total_steps == 0):
+						sys.exit()
+
+					curr_state = new_state
+
+					total_steps+=1
+
+def main():
+
+	model = dqn(4,2)
+	model.train()
+
+if __name__ == "__main__":
+	main()
