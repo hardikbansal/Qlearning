@@ -6,36 +6,39 @@ from layers import *
 
 import gym
 
-
 env = gym.make('CartPole-v0')
 
 
 class network():
 
-	def __init__(self, state_size, action_size, name="network"):
+	def __init__(self, state_size, action_size, h1_size=10, h2_size = 5, name="network"):
 
 		self.state_size = state_size
 		self.action_size = action_size
 		self.name = name
+		self.h1_size = h1_size
+		self.h2_size = h2_size
 
 	def net(self):
 
 		with tf.variable_scope(self.name) as scope:
 
 			self.input_state = tf.placeholder(tf.float32, [None, self.state_size], name="input_state")
+
+			h1 = linear1d(self.input_state, self.state_size, self.h1_size, name="hidden1")
+			h2 = linear1d(h1, self.h1_size, self.h2_size, name="hidden2")
+
+			self.output_weights = tf.nn.sigmoid(linear1d(h2, self.h2_size, self.action_size))
+
 			weight_action = tf.Variable(tf.ones([self.state_size, self.action_size]), name="weight_action")
-			weight_reward = tf.Variable(tf.ones([self.state_size, 1]), name="weight_reward")
-			weight_done = tf.Variable(tf.ones([self.state_size, 1]), name="weight_done")
-			self.output_weights = tf.nn.sigmoid(tf.matmul(self.input_state, weight_action))
 
 			self.out_action = tf.argmax(self.output_weights, 1)
-			self.out_done = tf.matmul(self.input_state, weight_done)
-
-
 
 class dqn():
 
 	def __init__(self, state_size, action_size):
+
+		# Defining the hyper parameters
 
 		self.state_size = state_size
 		self.action_size = action_size
@@ -105,10 +108,14 @@ class dqn():
 
 					new_state, reward, done, _ = env.step(temp_action[0])
 
+
 					if(total_steps == 0):
 						hist_buffer = np.array([[temp_action, curr_state, new_state, reward, done]])
 					else :
 						hist_buffer = np.insert(hist_buffer, hist_buffer.shape[0], np.array([temp_action, curr_state, new_state, reward, done]), axis=0)
+
+					if (done):
+						break
 
 					if(total_steps > self.pre_train_steps):
 
