@@ -26,9 +26,9 @@ class network():
 			weight_action = tf.Variable(tf.ones([self.state_size, self.action_size]), name="weight_action")
 			weight_reward = tf.Variable(tf.ones([self.state_size, 1]), name="weight_reward")
 			weight_done = tf.Variable(tf.ones([self.state_size, 1]), name="weight_done")
-			output_weights = tf.nn.sigmoid(tf.matmul(self.input_state, weight_action))
+			self.output_weights = tf.nn.sigmoid(tf.matmul(self.input_state, weight_action))
 
-			self.out_action = tf.argmax(output_weights, 1)
+			self.out_action = tf.argmax(self.output_weights, 1)
 			self.out_done = tf.matmul(self.input_state, weight_done)
 
 
@@ -45,6 +45,7 @@ class dqn():
 		self.max_steps = 200
 		self.pre_train_steps = 1000
 		self.batch_size = 20
+		self.gamma = 0.99
 
 	def copy_network(self, net1, net2):
 
@@ -73,7 +74,7 @@ class dqn():
 		self.loss = tf.reduce_sum(tf.square(self.target_reward - observed_reward))
 
 		optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
-		optimizer.minimize(self.loss, lr=0.0001)
+		self.loss_opt = ptimizer.minimize(self.loss, lr=0.0001)
 
 
 	def train(self):
@@ -109,9 +110,6 @@ class dqn():
 					else :
 						hist_buffer = np.insert(hist_buffer, hist_buffer.shape[0], np.array([temp_action, curr_state, new_state, reward, done]), axis=0)
 
-					# print(hist_buffer)
-
-
 					if(total_steps > self.pre_train_steps):
 
 						if(total_steps % self.update_freq == 0):
@@ -121,6 +119,15 @@ class dqn():
 							reward_hist = rand_batch[:,3]
 							state_hist = rand_batch[:,1]
 							action_hist = rand_batch[:,0]
+							next_state_hist = rand_batch[:,2]
+
+							temp_target_q = sess.run(self.main_net.output_weights, feed_dict={self.main_net.input_state:np.vstack(next_state_hist)})
+
+							temp_target_reward = reward_hist + self.gamma*temp_target_q
+
+							_ = sess.run(self.loss_opt, feed_dict={self.main_net.input_state:np.vstack(state_hist), self.target_reward:temp_target_reward, self.action_list:action_hist})
+
+							self.copy_network(self.main_net, self.target_net)
 
 
 					if(total_steps == 0):
