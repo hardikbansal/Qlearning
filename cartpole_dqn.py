@@ -12,7 +12,7 @@ env = gym.make('CartPole-v0')
 
 class network():
 
-	def __init__(self, state_size, action_size, h1_size=10, h2_size = 5, name="network"):
+	def __init__(self, state_size, action_size, h1_size=128, h2_size = 128, name="network"):
 
 		self.state_size = state_size
 		self.action_size = action_size
@@ -31,8 +31,6 @@ class network():
 
 			self.output_weights = tf.nn.sigmoid(linear1d(h2, self.h2_size, self.action_size))
 
-			weight_action = tf.Variable(tf.ones([self.state_size, self.action_size]), name="weight_action")
-
 			self.out_action = tf.argmax(self.output_weights, 1)
 
 class dqn():
@@ -45,13 +43,13 @@ class dqn():
 		self.action_size = action_size
 		self.eps = 0.1
 
-		self.num_episodes = 1000
-		self.max_steps = 200
+		self.num_episodes = 5000
+		self.max_steps = 1000
 		self.pre_train_steps = 20
-		self.update_freq = 10
+		self.update_freq = 100
 		self.batch_size = 20
-		self.gamma = 0.99
-		self.lr = 0.001
+		self.gamma = 0.9
+		self.lr = 0.0001
 
 	def copy_network(self, net1, net2):
 
@@ -99,6 +97,7 @@ class dqn():
 			for i in range(self.num_episodes):
 
 				curr_state = env.reset()
+				total_reward = 0
 
 				for j in range(1, self.max_steps+1):
 
@@ -112,47 +111,45 @@ class dqn():
 					# print(temp_action.shape)
 					new_state, reward, done, _ = env.step(temp_action[0])
 
+					total_reward += reward
 
 					if(total_steps == 0):
 						hist_buffer = np.array([[temp_action, curr_state, new_state, reward, done]])
 					else :
+						if(hist_buffer.shape[0] >= 10000):
+							np.delete(hist_buffer, 0, 0)
 						hist_buffer = np.insert(hist_buffer, hist_buffer.shape[0], np.array([temp_action, curr_state, new_state, reward, done]), axis=0)
 
 					if (done):
 						break
 
-					if(total_steps > self.pre_train_steps):
+					if(total_steps > self.pre_train_steps and total_steps % self.update_freq == 0):
 
-						if(total_steps % self.update_freq == 0):
+						rand_batch = hist_buffer[np.random.choice(hist_buffer.shape[0], self.batch_size, replace=False)]
 
-							rand_batch = hist_buffer[np.random.choice(hist_buffer.shape[0], self.batch_size, replace=False)]
+						reward_hist = rand_batch[:,3]
+						state_hist = rand_batch[:,1]
+						action_hist = np.vstack(rand_batch[:,0])
+						next_state_hist = rand_batch[:,2]
 
-							reward_hist = rand_batch[:,3]
-							state_hist = rand_batch[:,1]
-							action_hist = np.vstack(rand_batch[:,0])
-							next_state_hist = rand_batch[:,2]
+						temp_target_q = sess.run(self.main_net.output_weights, feed_dict={self.main_net.input_state:np.vstack(next_state_hist)})
 
-							temp_target_q = sess.run(self.main_net.output_weights, feed_dict={self.main_net.input_state:np.vstack(next_state_hist)})
-
-							temp_target_q = np.amax(temp_target_q,1)
-							temp_target_reward = reward_hist + self.gamma*temp_target_q
-							temp_target_reward =  np.reshape(temp_target_reward, [self.batch_size, 1])
-							
-							# print(action_hist.shape)
-
-
-							_ = sess.run(self.loss_opt, feed_dict={self.main_net.input_state:np.vstack(state_hist), self.target_reward:temp_target_reward, self.action_list:action_hist})
-
-							self.copy_network(self.main_net, self.target_net)
+						temp_target_q = np.amax(temp_target_q,1)
+						temp_target_reward = reward_hist + self.gamma*temp_target_q
+						temp_target_reward =  np.reshape(temp_target_reward, [self.batch_size, 1])
 						
-							sys.exit()
+						# print(action_hist.shape)
 
+						_ = sess.run(self.loss_opt, feed_dict={self.main_net.input_state:np.vstack(state_hist), self.target_reward:temp_target_reward, self.action_list:action_hist})
 
-					# if(total_steps == 0):
+						self.copy_network(self.main_net, self.target_net)
 
 					curr_state = new_state
 
 					total_steps+=1
+
+
+				print("Total rewards in episode " + str(total_reward))
 
 def main():
 
