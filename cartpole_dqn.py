@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 import sys
 import random
+import time
 
 from layers import *
 
@@ -26,10 +27,10 @@ class network():
 
 			self.input_state = tf.placeholder(tf.float32, [None, self.state_size], name="input_state")
 
-			h1 = linear1d(self.input_state, self.state_size, self.h1_size, name="hidden1")
-			h2 = linear1d(h1, self.h1_size, self.h2_size, name="hidden2")
+			h1 = tf.nn.tanh(linear1d(self.input_state, self.state_size, self.h1_size, name="hidden1"))
+			h2 = tf.nn.tanh(linear1d(h1, self.h1_size, self.h2_size, name="hidden2"))
 
-			self.output_weights = tf.nn.sigmoid(linear1d(h2, self.h2_size, self.action_size))
+			self.output_weights = linear1d(h2, self.h2_size, self.action_size, name="final")
 
 			self.out_action = tf.argmax(self.output_weights, 1)
 
@@ -41,13 +42,13 @@ class dqn():
 
 		self.state_size = state_size
 		self.action_size = action_size
-		self.eps = 0.1
+		self.eps = 0.5
 
-		self.num_episodes = 5000
+		self.num_episodes = 3000
 		self.max_steps = 1000
-		self.pre_train_steps = 20
+		self.pre_train_steps = 10
 		self.update_freq = 100
-		self.batch_size = 20
+		self.batch_size = 10
 		self.gamma = 0.9
 		self.lr = 0.0001
 
@@ -62,22 +63,25 @@ class dqn():
 	def model(self):
 
 		self.main_net = network(self.state_size, self.action_size, name="main_net")
-		self.target_net = network(self.state_size, self.action_size, name="target_net")
+		# self.target_net = network(self.state_size, self.action_size, name="target_net")
 
 		# Initialising the Networks
 		self.main_net.net()
-		self.target_net.net()
+		# self.target_net.net()
 
 		# Defining the model for the training
 
 		self.target_reward = tf.placeholder(tf.float32, [None, 1], name="target_reward")
 		self.action_list = tf.placeholder(tf.int32, [None, 1], name="action_list")
 
-		observed_reward = tf.reduce_sum(self.main_net.output_weights*tf.one_hot(self.action_list,2,dtype=tf.float32),1)
+		observed_reward = tf.reduce_sum(self.main_net.output_weights*tf.one_hot(tf.reshape(self.action_list,[-1]),2,dtype=tf.float32),1,keep_dims=True)
 
-		self.loss = tf.reduce_sum(tf.square(self.target_reward - observed_reward))
+		# print(self.target_reward.shape)
+		# sys.exit()
 
-		optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
+		self.loss = tf.reduce_mean(tf.square(observed_reward - self.target_reward))
+
+		optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.lr)
 		self.loss_opt = optimizer.minimize(self.loss)
 
 
@@ -90,7 +94,7 @@ class dqn():
 		with tf.Session() as sess:
 
 			sess.run(init)
-			self.copy_network(self.main_net, self.target_net)
+			# self.copy_network(self.main_net, self.target_net)
 			
 			total_steps = 0
 
@@ -103,27 +107,39 @@ class dqn():
 
 					temp = np.random.random()
 					
-					if temp < self.eps or total_steps < self.pre_train_steps:
+					if temp < self.eps :
 						temp_action = np.random.randint(self.action_size, size=[1])
 					else :
-						temp_action = sess.run([self.main_net.out_action[0]], feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
+						# print("I am here")
+						temp_action, temp_weights = sess.run([self.main_net.out_action, self.main_net.output_weights], feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
+						# print(temp_weights)
+					
+					self.eps*=0.99
 
-					# print(temp_action.shape)
 					new_state, reward, done, _ = env.step(temp_action[0])
 
+					# print(temp_action[0])
+
 					total_reward += reward
+
+					if(done):
+						reward = -100
 
 					if(total_steps == 0):
 						hist_buffer = np.array([[temp_action, curr_state, new_state, reward, done]])
 					else :
 						if(hist_buffer.shape[0] >= 10000):
-							np.delete(hist_buffer, 0, 0)
+							hist_buffer = np.delete(hist_buffer, 0, 0)
 						hist_buffer = np.insert(hist_buffer, hist_buffer.shape[0], np.array([temp_action, curr_state, new_state, reward, done]), axis=0)
+
+					curr_state = new_state
 
 					if (done):
 						break
 
-					if(total_steps > self.pre_train_steps and total_steps % self.update_freq == 0):
+					if(total_steps > self.pre_train_steps):
+
+						# print("Training the network")
 
 						rand_batch = hist_buffer[np.random.choice(hist_buffer.shape[0], self.batch_size, replace=False)]
 
@@ -142,14 +158,13 @@ class dqn():
 
 						_ = sess.run(self.loss_opt, feed_dict={self.main_net.input_state:np.vstack(state_hist), self.target_reward:temp_target_reward, self.action_list:action_hist})
 
-						self.copy_network(self.main_net, self.target_net)
+						# self.copy_network(self.main_net, self.target_net)
 
-					curr_state = new_state
 
 					total_steps+=1
 
 
-				print("Total rewards in episode " + str(total_reward))
+				print("Total rewards in episode " + str(i) + " is " + str(total_steps))
 
 def main():
 
