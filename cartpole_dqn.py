@@ -63,11 +63,11 @@ class dqn():
 	def model(self):
 
 		self.main_net = network(self.state_size, self.action_size, name="main_net")
-		# self.target_net = network(self.state_size, self.action_size, name="target_net")
+		self.target_net = network(self.state_size, self.action_size, name="target_net")
 
 		# Initialising the Networks
 		self.main_net.net()
-		# self.target_net.net()
+		self.target_net.net()
 
 		# Defining the model for the training
 
@@ -96,7 +96,7 @@ class dqn():
 		with tf.Session() as sess:
 
 			sess.run(init)
-			# self.copy_network(self.main_net, self.target_net)
+			self.copy_network(self.main_net, self.target_net)
 			
 			total_steps = 0
 
@@ -162,7 +162,8 @@ class dqn():
 
 						_ = sess.run(self.loss_opt, feed_dict={self.main_net.input_state:np.vstack(state_hist), self.target_reward:temp_target_reward, self.action_list:action_hist})
 
-						# self.copy_network(self.main_net, self.target_net)
+						if(total_steps%self.update_freq == 0):
+							self.copy_network(self.main_net, self.target_net)
 
 
 					total_steps+=1
