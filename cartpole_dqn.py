@@ -13,7 +13,7 @@ env = gym.make('CartPole-v0')
 
 class network():
 
-	def __init__(self, state_size, action_size, h1_size=128, h2_size = 128, name="network"):
+	def __init__(self, state_size, action_size, h1_size=200, h2_size = 200, name="network"):
 
 		self.state_size = state_size
 		self.action_size = action_size
@@ -30,7 +30,7 @@ class network():
 			h1 = tf.nn.tanh(linear1d(self.input_state, self.state_size, self.h1_size, name="hidden1"))
 			h2 = tf.nn.tanh(linear1d(h1, self.h1_size, self.h2_size, name="hidden2"))
 
-			self.output_weights = linear1d(h2, self.h2_size, self.action_size, name="final")
+			self.output_weights = (linear1d(h2, self.h2_size, self.action_size, name="final"))
 
 			self.out_action = tf.argmax(self.output_weights, 1)
 
@@ -46,11 +46,11 @@ class dqn():
 
 		self.num_episodes = 3000
 		self.max_steps = 1000
-		self.pre_train_steps = 10
+		self.pre_train_steps = 50
 		self.update_freq = 100
-		self.batch_size = 10
+		self.batch_size = 50
 		self.gamma = 0.9
-		self.lr = 0.0001
+		self.lr = 0.001
 
 	def copy_network(self, net1, net2):
 
@@ -88,6 +88,8 @@ class dqn():
 	def train(self):
 
 		self.model()
+		print("Initialized the model")
+
 		init = tf.global_variables_initializer()
 
 
@@ -99,6 +101,8 @@ class dqn():
 			total_steps = 0
 
 			for i in range(self.num_episodes):
+
+				print("Started the episode " + str(i))
 
 				curr_state = env.reset()
 				total_reward = 0
@@ -164,7 +168,7 @@ class dqn():
 					total_steps+=1
 
 
-				print("Total rewards in episode " + str(i) + " is " + str(total_steps))
+				print("Total rewards in episode " + str(i) + " is " + str(total_reward))
 
 def main():
 
