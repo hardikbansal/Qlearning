@@ -171,6 +171,29 @@ class dqn():
 
 				print("Total rewards in episode " + str(i) + " is " + str(total_reward))
 
+	def play():
+
+		with tf.Session() as sess:
+
+			self.copy_network(self.main_net, self.target_net)
+
+			for i in range(self.num_trials):
+
+				curr_state = env.reset()
+
+				total_reward = 0
+
+				for j in range(self.max_steps):
+
+					env.render()
+
+					action = sess.run(self.main_net.out_action, feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
+					new_state, reward, done, _ = env.step(action)
+					total_reward += reward
+					curr_state = new_state
+
+
+
 def main():
 
 	model = dqn(4,2)
