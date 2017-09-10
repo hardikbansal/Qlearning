@@ -7,13 +7,13 @@ import time
 from layers import *
 
 import gym
+from gym import wrappers
 
-env = gym.make('CartPole-v0')
 
 
 class network():
 
-	def __init__(self, state_size, action_size, h1_size=200, h2_size = 200, name="network"):
+	def __init__(self, state_size, action_size, h1_size=128, h2_size=128, name="network"):
 
 		self.state_size = state_size
 		self.action_size = action_size
@@ -46,11 +46,11 @@ class dqn():
 
 		self.num_episodes = 3000
 		self.max_steps = 1000
-		self.pre_train_steps = 50
+		self.pre_train_steps = 10
 		self.update_freq = 100
-		self.batch_size = 50
+		self.batch_size = 10
 		self.gamma = 0.9
-		self.lr = 0.001
+		self.lr = 0.0001
 
 	def copy_network(self, net1, net2):
 
@@ -63,11 +63,11 @@ class dqn():
 	def model(self):
 
 		self.main_net = network(self.state_size, self.action_size, name="main_net")
-		self.target_net = network(self.state_size, self.action_size, name="target_net")
+		# self.target_net = network(self.state_size, self.action_size, name="target_net")
 
 		# Initialising the Networks
 		self.main_net.net()
-		self.target_net.net()
+		# self.target_net.net()
 
 		# Defining the model for the training
 
@@ -87,32 +87,37 @@ class dqn():
 
 	def train(self):
 
+
+		env = gym.make('CartPole-v0')
+
+		hist_buffer = []
+
 		self.model()
 		print("Initialized the model")
 
 		init = tf.global_variables_initializer()
 
-
 		with tf.Session() as sess:
 
 			sess.run(init)
-			self.copy_network(self.main_net, self.target_net)
+			# self.copy_network(self.main_net, self.target_net)
 			
 			total_steps = 0
+			total_reward_list = []
 
 			for i in range(self.num_episodes):
 
-				print("Started the episode " + str(i))
+				# print("Started the episode " + str(i))
 
 				curr_state = env.reset()
 				total_reward = 0
 
 				for j in range(1, self.max_steps+1):
 
-					temp = np.random.random()
+					temp = random.random()
 					
 					if temp < self.eps :
-						temp_action = np.random.randint(self.action_size, size=[1])
+						temp_action = [env.action_space.sample()]
 					else :
 						# print("I am here")
 						temp_action, temp_weights = sess.run([self.main_net.out_action, self.main_net.output_weights], feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
@@ -122,37 +127,35 @@ class dqn():
 
 					new_state, reward, done, _ = env.step(temp_action[0])
 
-					# print(temp_action[0])
-
 					total_reward += reward
-
 					if(done):
 						reward = -100
 
-					if(total_steps == 0):
-						hist_buffer = np.array([[temp_action, curr_state, new_state, reward, done]])
-					else :
-						if(hist_buffer.shape[0] >= 10000):
-							hist_buffer = np.delete(hist_buffer, 0, 0)
-						hist_buffer = np.insert(hist_buffer, hist_buffer.shape[0], np.array([temp_action, curr_state, new_state, reward, done]), axis=0)
+					# print(type(hist_buffer))
+
+					hist_buffer.append((curr_state, temp_action[0], reward, new_state, done))
+					if(len(hist_buffer) >= 10000):
+						hist_buffer.pop(0)
 
 					curr_state = new_state
 
 					if (done):
 						break
 
-					if(total_steps > self.pre_train_steps):
+					if(total_steps > self.batch_size):
 
 						# print("Training the network")
 
-						rand_batch = hist_buffer[np.random.choice(hist_buffer.shape[0], self.batch_size, replace=False)]
+						rand_batch = random.sample(hist_buffer, self.batch_size)
 
-						reward_hist = rand_batch[:,3]
-						state_hist = rand_batch[:,1]
-						action_hist = np.vstack(rand_batch[:,0])
-						next_state_hist = rand_batch[:,2]
+						reward_hist = [m[2] for m in rand_batch]
+						state_hist = [m[0] for m in rand_batch]
+						action_hist = [m[1] for m in rand_batch]
+						next_state_hist = [m[3] for m in rand_batch]
 
 						temp_target_q = sess.run(self.main_net.output_weights, feed_dict={self.main_net.input_state:np.vstack(next_state_hist)})
+
+						# sys.exit()
 
 						temp_target_q = np.amax(temp_target_q,1)
 						temp_target_reward = reward_hist + self.gamma*temp_target_q
@@ -160,24 +163,43 @@ class dqn():
 						
 						# print(action_hist.shape)
 
-						_ = sess.run(self.loss_opt, feed_dict={self.main_net.input_state:np.vstack(state_hist), self.target_reward:temp_target_reward, self.action_list:action_hist})
-
-						if(total_steps%self.update_freq == 0):
-							self.copy_network(self.main_net, self.target_net)
+						_ = sess.run(self.loss_opt, feed_dict={self.main_net.input_state:np.vstack(state_hist), self.target_reward:temp_target_reward, self.action_list:np.vstack(action_hist)})
 
 
 					total_steps+=1
 
+					
+				# if(len(total_reward_list) == 50):
+				# 	# print("Here")
+				# 	total_reward_list.pop(0)
+				# total_reward_list.insert(len(total_reward_list), total_reward)
 
+				# avg_reward = sum(total_reward_list)/len(total_reward_list)
+
+				# if(avg_reward > 198):
+				# 	return
+				
+				# print(avg_reward)
+
+				
 				print("Total rewards in episode " + str(i) + " is " + str(total_reward))
 
-	def play():
+	def play(self):
+
+		# self.model()
+		env = gym.make('CartPole-v0')
+		# print("Initialized the model")
+
+		init = tf.global_variables_initializer()
+
+		# env = wrappers.Monitor(env, './output-video', force=True)
 
 		with tf.Session() as sess:
+			sess.run(init)
 
 			self.copy_network(self.main_net, self.target_net)
 
-			for i in range(self.num_trials):
+			for i in range(10):
 
 				curr_state = env.reset()
 
@@ -188,9 +210,15 @@ class dqn():
 					env.render()
 
 					action = sess.run(self.main_net.out_action, feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
-					new_state, reward, done, _ = env.step(action)
+					new_state, reward, done, _ = env.step(action[0])
+
+					if(done == True):
+						break
+
 					total_reward += reward
 					curr_state = new_state
+
+				print("Total rewards in testing step " + str(i) + " are " + str(total_reward))
 
 
 
@@ -198,6 +226,7 @@ def main():
 
 	model = dqn(4,2)
 	model.train()
+	model.play()
 
 if __name__ == "__main__":
 	main()
