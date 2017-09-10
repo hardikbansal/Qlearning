@@ -30,7 +30,7 @@ class network():
 			h1 = tf.nn.tanh(linear1d(self.input_state, self.state_size, self.h1_size, name="hidden1"))
 			h2 = tf.nn.tanh(linear1d(h1, self.h1_size, self.h2_size, name="hidden2"))
 
-			self.output_weights = (linear1d(h2, self.h2_size, self.action_size, name="final"))
+			self.output_weights = linear1d(h2, self.h2_size, self.action_size, name="final")
 
 			self.out_action = tf.argmax(self.output_weights, 1)
 
@@ -84,28 +84,31 @@ class dqn():
 		optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.lr)
 		self.loss_opt = optimizer.minimize(self.loss)
 
+		self.model_vars = tf.trainable_variables()
+		for var in self.model_vars: print(var.name)
+
 
 	def train(self):
 
 
 		env = gym.make('CartPole-v0')
 
-		hist_buffer = []
 
 		self.model()
-		print("Initialized the model")
 
 		init = tf.global_variables_initializer()
 
 		with tf.Session() as sess:
 
 			sess.run(init)
+			print("Initialized the model")
 			# self.copy_network(self.main_net, self.target_net)
 			
 			total_steps = 0
 			total_reward_list = []
+			hist_buffer = []
 
-			for i in range(self.num_episodes):
+			for i in range(3000):
 
 				# print("Started the episode " + str(i))
 
@@ -169,56 +172,47 @@ class dqn():
 					total_steps+=1
 
 					
-				# if(len(total_reward_list) == 50):
-				# 	# print("Here")
-				# 	total_reward_list.pop(0)
-				# total_reward_list.insert(len(total_reward_list), total_reward)
+				if(len(total_reward_list) == 10):
+					# print("Here")
+					total_reward_list.pop(0)
+				total_reward_list.insert(len(total_reward_list), total_reward)
 
-				# avg_reward = sum(total_reward_list)/len(total_reward_list)
+				avg_reward = sum(total_reward_list)/len(total_reward_list)
 
-				# if(avg_reward > 198):
-				# 	return
+				if(avg_reward > 198):
+					break
 				
-				# print(avg_reward)
+				print(avg_reward)
 
 				
 				print("Total rewards in episode " + str(i) + " is " + str(total_reward))
+			
+			# for var in self.model_vars: print(var.name, sess.run(var.name))
 
-	def play(self):
+			self.play(sess)
+
+
+	def play(self, sess):
 
 		# self.model()
 		env = gym.make('CartPole-v0')
-		# print("Initialized the model")
 
-		init = tf.global_variables_initializer()
+		# init = tf.global_variables_initializer()
 
-		# env = wrappers.Monitor(env, './output-video', force=True)
+		# for var in self.model_vars: print(var.name, sess.run(var.name))
 
-		with tf.Session() as sess:
-			sess.run(init)
-
-			self.copy_network(self.main_net, self.target_net)
-
-			for i in range(10):
-
-				curr_state = env.reset()
-
-				total_reward = 0
-
-				for j in range(self.max_steps):
-
-					env.render()
-
-					action = sess.run(self.main_net.out_action, feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
-					new_state, reward, done, _ = env.step(action[0])
-
-					if(done == True):
-						break
-
-					total_reward += reward
-					curr_state = new_state
-
-				print("Total rewards in testing step " + str(i) + " are " + str(total_reward))
+		for i in range(10):
+			curr_state = env.reset()
+			total_reward = 0
+			for j in range(self.max_steps):
+				env.render()
+				action = sess.run(self.main_net.out_action, feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
+				new_state, reward, done, _ = env.step(action[0])
+				if(done == True):
+					break
+				total_reward += reward
+				curr_state = new_state
+			print("Total rewards in testing step " + str(i) + " are " + str(total_reward))
 
 
 
@@ -226,7 +220,7 @@ def main():
 
 	model = dqn(4,2)
 	model.train()
-	model.play()
+	# model.play()
 
 if __name__ == "__main__":
 	main()
