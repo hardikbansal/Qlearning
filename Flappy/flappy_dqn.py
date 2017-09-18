@@ -20,12 +20,14 @@ import wrapped_flappy_bird as game
 
 class network():
 
-	def __init__(self, state_size, action_size, name="network"):
+	def __init__(self, state_size, action_size, img_width, img_height name="network"):
 
 		self.action_size = action_size
 		self.name = name
 		self.h1_size = h1_size
 		self.h2_size = h2_size
+		self.img_width = img_width
+		self.img_height = img_height
 
 	def net(self):
 
@@ -39,7 +41,12 @@ class network():
 
 			o_c3 = tf.reshape(o_c3)
 
-			o_l1 = linear1d(o_c3, , param outputdim)
+			shape = tf.shape(o_c3).as_list()
+
+			o_l1 = linear1d(o_c3, shape[1], 512)
+			o_l2 = linear1d(o_l1, 512, 2)
+
+			return o_l2
 
 			
 
