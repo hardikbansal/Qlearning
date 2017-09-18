@@ -130,14 +130,27 @@ class flappy():
 			total_steps = 0
 			total_reward_list = []
 			hist_buffer = []
-			img_batch = []
 
 			for i in range(self.num_episodes):
 
 				# print("Started the episode " + str(i))
 
 				env = game.GameState()
+				img_batch = []
 				total_reward = 0
+
+				for j in range(4):
+					temp_action = random.randint(0,1)
+					action = np.zeros(2)
+					action[temp_action] = 1
+					new_state, reward, done = env.frame_step(action)
+
+					temp_img = pre_process(new_state)
+					img_batch.insert(len(img_batch), temp_img)
+					img_batch.pop(0)
+
+					total_reward += reward
+
 
 				for j in range(1, self.max_steps+1):
 
@@ -146,9 +159,6 @@ class flappy():
 					if temp < self.eps :
 						temp_action = random.randint(0,1)
 					else :
-						temp_img = pre_process(curr_state)
-						img_batch.insert(len(img_batch), temp_img)
-						del img_batch[0]
 						temp_weights = sess.run([self.main_net.output_weights], feed_dict={self.main_net.input_state:img_batch})
 						temp_action = np.argmax(temp_weights)
 					
@@ -169,12 +179,18 @@ class flappy():
 
 					curr_state = new_state
 
+					# Adding the image to the batch
+
+					temp_img = pre_process(curr_state)
+					img_batch.insert(len(img_batch), temp_img)
+					img_batch.pop(0)
+
+					# Breaking the loop if the state is terminated
+
 					if (done):
 						break
 
 					if(total_steps > self.batch_size):
-
-						# print("Training the network")
 
 						rand_batch = random.sample(hist_buffer, self.batch_size)
 
