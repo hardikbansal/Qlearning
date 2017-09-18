@@ -20,9 +20,8 @@ import wrapped_flappy_bird as game
 
 class network():
 
-	def __init__(self, state_size, action_size, h1_size=128, h2_size=128, name="network"):
+	def __init__(self, state_size, action_size, name="network"):
 
-		self.state_size = state_size
 		self.action_size = action_size
 		self.name = name
 		self.h1_size = h1_size
@@ -32,14 +31,17 @@ class network():
 
 		with tf.variable_scope(self.name) as scope:
 
-			self.input_state = tf.placeholder(tf.float32, [None, self.state_size], name="input_state")
+			self.input_state = tf.placeholder(tf.float32, [None, self.img_width, self.img_height, 1], name="input_state")
 
-			h1 = tf.nn.tanh(linear1d(self.input_state, self.state_size, self.h1_size, name="hidden1"))
-			h2 = tf.nn.tanh(linear1d(h1, self.h1_size, self.h2_size, name="hidden2"))
+			o_c1 = general_conv2d(self.input_state, 32, 8, 8, 4, 4, padding="SAME", do_norm=False, name="conv1")
+			o_c2 = general_conv2d(o_c1, 64, 4, 4, 2, 2, padding="SAME", do_norm=False, name="conv2")
+			o_c3 = general_conv2d(o_c1, 64, 3, 3, 1, 1, padding="SAME", do_norm=False, name="conv3")
 
-			self.output_weights = linear1d(h2, self.h2_size, self.action_size, name="final")
+			o_c3 = tf.reshape(o_c3)
 
-			self.out_action = tf.argmax(self.output_weights, 1)
+			o_l1 = linear1d(o_c3, , param outputdim)
+
+			
 
 class flappy():
 
@@ -47,7 +49,10 @@ class flappy():
 
 		# Defining the hyper parameters
 
-		self.state_size = state_size
+		self.img_width = 288
+		self.img_height = 512
+		self.img_depth = 3
+		self.img_size = self.img_width*self.img_height*self.img_depth
 		self.action_size = action_size
 		self.eps = 0.5
 
@@ -97,12 +102,13 @@ class flappy():
 
 	def train(self):
 
-		env = game.GameState()
 
 		self.model()
 
+		sys.exit()
 		init = tf.global_variables_initializer()
 
+		
 		with tf.Session() as sess:
 
 			sess.run(init)
@@ -117,7 +123,7 @@ class flappy():
 
 				# print("Started the episode " + str(i))
 
-				curr_state = env.reset()
+				env = game.GameState()
 				total_reward = 0
 
 				for j in range(1, self.max_steps+1):
@@ -127,9 +133,7 @@ class flappy():
 					if temp < self.eps :
 						temp_action = [env.action_space.sample()]
 					else :
-						# print("I am here")
 						temp_action, temp_weights = sess.run([self.main_net.out_action, self.main_net.output_weights], feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
-						# print(temp_weights)
 					
 					self.eps*=0.99
 
@@ -197,7 +201,7 @@ class flappy():
 			self.play(sess)
 
 
-	def play(self):
+	def play(self, sess):
 
 
 		for i in range(self.num_episodes):
@@ -239,8 +243,8 @@ class flappy():
 def main():
 
 	model = flappy(4,2)
-	# model.train()
-	model.play()
+	model.train()
+	# model.play()
 
 if __name__ == "__main__":
 	main()
