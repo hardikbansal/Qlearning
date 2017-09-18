@@ -3,13 +3,20 @@ import numpy as np
 import sys
 import random
 import time
+import imageio
+
+from PIL import Image
+
+from images2gif import writeGif
+
+sys.path.append('game/')
+sys.path.append('../')
 
 from layers import *
 
-import gym
-from gym import wrappers
 
 
+import wrapped_flappy_bird as game
 
 class network():
 
@@ -34,7 +41,7 @@ class network():
 
 			self.out_action = tf.argmax(self.output_weights, 1)
 
-class dqn():
+class flappy():
 
 	def __init__(self, state_size, action_size):
 
@@ -90,9 +97,7 @@ class dqn():
 
 	def train(self):
 
-
-		env = gym.make('CartPole-v0')
-
+		env = game.GameState()
 
 		self.model()
 
@@ -192,35 +197,50 @@ class dqn():
 			self.play(sess)
 
 
-	def play(self, sess):
+	def play(self):
 
-		# self.model()
-		env = gym.make('CartPole-v0')
 
-		# init = tf.global_variables_initializer()
+		for i in range(self.num_episodes):
 
-		# for var in self.model_vars: print(var.name, sess.run(var.name))
+			game_state = game.GameState()
 
-		for i in range(10):
-			curr_state = env.reset()
-			total_reward = 0
+			# sys.exit()
+
+			# frames = []
+			# num_frames = 0
+
 			for j in range(self.max_steps):
-				env.render()
-				action = sess.run(self.main_net.out_action, feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
-				new_state, reward, done, _ = env.step(action[0])
-				if(done == True):
+				
+				temp = random.randint(0,1)
+				action = np.zeros([2])
+				action[temp] = 1
+				new_state, reward, done = game_state.frame_step(action)
+				
+				# print(new_state)
+				# frames.insert(num_frames, Image.fromarray(np.uint8(new_state)))
+				# num_frames+=1
+
+				if done:
 					break
-				total_reward += reward
-				curr_state = new_state
-			print("Total rewards in testing step " + str(i) + " are " + str(total_reward))
+
+			sys.exit()
+
+
+
+
+
+
+
+
+
 
 
 
 def main():
 
-	model = dqn(4,2)
-	model.train()
-	# model.play()
+	model = flappy(4,2)
+	# model.train()
+	model.play()
 
 if __name__ == "__main__":
 	main()
