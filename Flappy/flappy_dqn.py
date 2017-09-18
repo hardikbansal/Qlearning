@@ -6,7 +6,7 @@ import time
 import imageio
 
 from PIL import Image
-
+from scipy.misc import imresize
 from images2gif import writeGif
 
 sys.path.append('game/')
@@ -44,11 +44,9 @@ class network():
 			shape = tf.shape(o_c3).as_list()
 
 			o_l1 = linear1d(o_c3, shape[1], 512)
-			o_l2 = linear1d(o_l1, 512, 2)
+			self.output_weights = linear1d(o_l1, 512, 2)
 
-			return o_l2
 
-			
 
 class flappy():
 
@@ -106,6 +104,13 @@ class flappy():
 		self.model_vars = tf.trainable_variables()
 		for var in self.model_vars: print(var.name)
 
+	def pre_process(self, img):
+
+		grey_matrix = np.array([0.2125, 0.7154, 0.0721])
+		new_img = np.dot(img, grey_matrix)
+		new_img = imresize(new_img, [80, 80])
+		return new_img
+
 
 	def train(self):
 
@@ -125,8 +130,9 @@ class flappy():
 			total_steps = 0
 			total_reward_list = []
 			hist_buffer = []
+			img_batch = []
 
-			for i in range(3000):
+			for i in range(self.num_episodes):
 
 				# print("Started the episode " + str(i))
 
@@ -138,21 +144,26 @@ class flappy():
 					temp = random.random()
 					
 					if temp < self.eps :
-						temp_action = [env.action_space.sample()]
+						temp_action = random.randint(0,1)
 					else :
-						temp_action, temp_weights = sess.run([self.main_net.out_action, self.main_net.output_weights], feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
+						temp_img = pre_process(curr_state)
+						img_batch.insert(len(img_batch), temp_img)
+						del img_batch[0]
+						temp_weights = sess.run([self.main_net.output_weights], feed_dict={self.main_net.input_state:img_batch})
+						temp_action = np.argmax(temp_weights)
 					
 					self.eps*=0.99
 
-					new_state, reward, done, _ = env.step(temp_action[0])
+					action = np.zeros(2)
+					action[temp_action] = 1
+
+					new_state, reward, done = env.frame_step(action)
 
 					total_reward += reward
-					if(done):
-						reward = -100
 
 					# print(type(hist_buffer))
 
-					hist_buffer.append((curr_state, temp_action[0], reward, new_state, done))
+					hist_buffer.append((curr_state, temp_action, reward, new_state, done))
 					if(len(hist_buffer) >= 10000):
 						hist_buffer.pop(0)
 
