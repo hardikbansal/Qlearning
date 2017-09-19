@@ -7,7 +7,6 @@ import imageio
 
 from PIL import Image
 from scipy.misc import imresize
-from images2gif import writeGif
 
 sys.path.append('game/')
 sys.path.append('../')
@@ -20,12 +19,9 @@ import wrapped_flappy_bird as game
 
 class network():
 
-	def __init__(self, state_size, action_size, img_width, img_height name="network"):
+	def __init__(self, img_width, img_height, name="network"):
 
-		self.action_size = action_size
 		self.name = name
-		self.h1_size = h1_size
-		self.h2_size = h2_size
 		self.img_width = img_width
 		self.img_height = img_height
 
@@ -50,7 +46,7 @@ class network():
 
 class flappy():
 
-	def __init__(self, state_size, action_size):
+	def __init__(self):
 
 		# Defining the hyper parameters
 
@@ -58,7 +54,6 @@ class flappy():
 		self.img_height = 512
 		self.img_depth = 3
 		self.img_size = self.img_width*self.img_height*self.img_depth
-		self.action_size = action_size
 		self.eps = 0.5
 
 		self.num_episodes = 3000
@@ -79,30 +74,30 @@ class flappy():
 
 	def model(self):
 
-		self.main_net = network(self.state_size, self.action_size, name="main_net")
-		# self.target_net = network(self.state_size, self.action_size, name="target_net")
+		self.main_net = network(self.img_width, self.img_height, name="main_net")
+		self.target_net = network(self.img_width, self.img_height, name="target_net")
 
 		# Initialising the Networks
 		self.main_net.net()
-		# self.target_net.net()
+		self.target_net.net()
 
 		# Defining the model for the training
 
-		self.target_reward = tf.placeholder(tf.float32, [None, 1], name="target_reward")
-		self.action_list = tf.placeholder(tf.int32, [None, 1], name="action_list")
+		# self.target_reward = tf.placeholder(tf.float32, [None, 1], name="target_reward")
+		# self.action_list = tf.placeholder(tf.int32, [None, 1], name="action_list")
 
-		observed_reward = tf.reduce_sum(self.main_net.output_weights*tf.one_hot(tf.reshape(self.action_list,[-1]),2,dtype=tf.float32),1,keep_dims=True)
+		# observed_reward = tf.reduce_sum(self.main_net.output_weights*tf.one_hot(tf.reshape(self.action_list,[-1]),2,dtype=tf.float32),1,keep_dims=True)
 
-		# print(self.target_reward.shape)
-		# sys.exit()
+		# # print(self.target_reward.shape)
+		# # sys.exit()
 
-		self.loss = tf.reduce_mean(tf.square(observed_reward - self.target_reward))
+		# self.loss = tf.reduce_mean(tf.square(observed_reward - self.target_reward))
 
-		optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.lr)
-		self.loss_opt = optimizer.minimize(self.loss)
+		# optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.lr)
+		# self.loss_opt = optimizer.minimize(self.loss)
 
-		self.model_vars = tf.trainable_variables()
-		for var in self.model_vars: print(var.name)
+		# self.model_vars = tf.trainable_variables()
+		# for var in self.model_vars: print(var.name)
 
 	def pre_process(self, img):
 
@@ -168,20 +163,20 @@ class flappy():
 					action[temp_action] = 1
 
 					new_state, reward, done = env.frame_step(action)
+					temp_img = pre_process(new_state)
 
 					total_reward += reward
 
 					# print(type(hist_buffer))
 
-					hist_buffer.append((curr_state, temp_action, reward, new_state, done))
+					hist_buffer.append((img_batch, temp_action, reward, img_batch[1:].insert(4,temp_img), done))
+					
 					if(len(hist_buffer) >= 10000):
 						hist_buffer.pop(0)
 
-					curr_state = new_state
 
 					# Adding the image to the batch
 
-					temp_img = pre_process(curr_state)
 					img_batch.insert(len(img_batch), temp_img)
 					img_batch.pop(0)
 
@@ -191,6 +186,8 @@ class flappy():
 						break
 
 					if(total_steps > self.batch_size):
+
+						sys.exit()
 
 						rand_batch = random.sample(hist_buffer, self.batch_size)
 
@@ -213,20 +210,6 @@ class flappy():
 
 
 					total_steps+=1
-
-					
-				if(len(total_reward_list) == 10):
-					# print("Here")
-					total_reward_list.pop(0)
-				total_reward_list.insert(len(total_reward_list), total_reward)
-
-				avg_reward = sum(total_reward_list)/len(total_reward_list)
-
-				if(avg_reward > 198):
-					break
-				
-				print(avg_reward)
-
 				
 				print("Total rewards in episode " + str(i) + " is " + str(total_reward))
 			
@@ -235,7 +218,7 @@ class flappy():
 			self.play(sess)
 
 
-	def play(self, sess):
+	def play(self):
 
 
 		for i in range(self.num_episodes):
@@ -276,7 +259,7 @@ class flappy():
 
 def main():
 
-	model = flappy(4,2)
+	model = flappy()
 	model.train()
 	# model.play()
 
