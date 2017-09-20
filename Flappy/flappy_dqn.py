@@ -29,17 +29,20 @@ class network():
 
 		with tf.variable_scope(self.name) as scope:
 
-			self.input_state = tf.placeholder(tf.float32, [None, self.img_width, self.img_height, 1], name="input_state")
+			self.input_state = tf.placeholder(tf.float32, [None, self.img_width, self.img_height, 4], name="input_state")
 
 			o_c1 = general_conv2d(self.input_state, 32, 8, 8, 4, 4, padding="SAME", do_norm=False, name="conv1")
 			o_c2 = general_conv2d(o_c1, 64, 4, 4, 2, 2, padding="SAME", do_norm=False, name="conv2")
 			o_c3 = general_conv2d(o_c1, 64, 3, 3, 1, 1, padding="SAME", do_norm=False, name="conv3")
 
-			o_c3 = tf.reshape(o_c3)
+			shape = o_c3.get_shape().as_list()
 
-			shape = tf.shape(o_c3).as_list()
+			o_c3 = tf.reshape(o_c3,[-1, shape[1]*shape[2]*shape[3]])
+
+			shape = o_c3.get_shape().as_list()
 
 			o_l1 = linear1d(o_c3, shape[1], 512)
+
 			self.output_weights = linear1d(o_l1, 512, 2)
 
 
@@ -113,6 +116,7 @@ class flappy():
 		self.model()
 
 		sys.exit()
+		
 		init = tf.global_variables_initializer()
 
 		
@@ -154,7 +158,7 @@ class flappy():
 					if temp < self.eps :
 						temp_action = random.randint(0,1)
 					else :
-						temp_weights = sess.run([self.main_net.output_weights], feed_dict={self.main_net.input_state:img_batch})
+						temp_weights = sess.run([self.main_net.output_weights], feed_dict={self.main_net.input_state:np.stack(img_batch,axis=2)})
 						temp_action = np.argmax(temp_weights)
 					
 					self.eps*=0.99

@@ -13,7 +13,7 @@ SCREENHEIGHT = 512
 
 pygame.init()
 FPSCLOCK = pygame.time.Clock()
-SCREEN = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
+# SCREEN = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
 pygame.display.set_caption('Flappy Bird')
 
 IMAGES, SOUNDS, HITMASKS = flappy_bird_utils.load()
@@ -126,17 +126,17 @@ class GameState:
             reward = -1
 
         # draw sprites
-        SCREEN.blit(IMAGES['background'], (0,0))
+        # SCREEN.blit(IMAGES['background'], (0,0))
 
-        for uPipe, lPipe in zip(self.upperPipes, self.lowerPipes):
-            SCREEN.blit(IMAGES['pipe'][0], (uPipe['x'], uPipe['y']))
-            SCREEN.blit(IMAGES['pipe'][1], (lPipe['x'], lPipe['y']))
+        # for uPipe, lPipe in zip(self.upperPipes, self.lowerPipes):
+        #     SCREEN.blit(IMAGES['pipe'][0], (uPipe['x'], uPipe['y']))
+        #     SCREEN.blit(IMAGES['pipe'][1], (lPipe['x'], lPipe['y']))
 
-        SCREEN.blit(IMAGES['base'], (self.basex, BASEY))
+        # SCREEN.blit(IMAGES['base'], (self.basex, BASEY))
         # print score so player overlaps the score
         # showScore(self.score)
-        SCREEN.blit(IMAGES['player'][self.playerIndex],
-                    (self.playerx, self.playery))
+        # SCREEN.blit(IMAGES['player'][self.playerIndex],
+                    # (self.playerx, self.playery))
 
         image_data = pygame.surfarray.array3d(pygame.display.get_surface())
         pygame.display.update()
@@ -171,7 +171,7 @@ def showScore(score):
     Xoffset = (SCREENWIDTH - totalWidth) / 2
 
     for digit in scoreDigits:
-        SCREEN.blit(IMAGES['numbers'][digit], (Xoffset, SCREENHEIGHT * 0.1))
+        # SCREEN.blit(IMAGES['numbers'][digit], (Xoffset, SCREENHEIGHT * 0.1))
         Xoffset += IMAGES['numbers'][digit].get_width()
 
 
