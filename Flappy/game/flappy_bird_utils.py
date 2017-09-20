@@ -14,7 +14,7 @@ def load():
     # path of pipe
     PIPE_PATH = 'assets/sprites/pipe-green.png'
 
-    IMAGES, SOUNDS, HITMASKS = {}, {}, {}
+    IMAGES,  HITMASKS = {},  {}
 
     # numbers sprites for score display
     IMAGES['numbers'] = (
@@ -39,11 +39,11 @@ def load():
     else:
         soundExt = '.ogg'
 
-    SOUNDS['die']    = pygame.mixer.Sound('assets/audio/die' + soundExt)
-    SOUNDS['hit']    = pygame.mixer.Sound('assets/audio/hit' + soundExt)
-    SOUNDS['point']  = pygame.mixer.Sound('assets/audio/point' + soundExt)
-    SOUNDS['swoosh'] = pygame.mixer.Sound('assets/audio/swoosh' + soundExt)
-    SOUNDS['wing']   = pygame.mixer.Sound('assets/audio/wing' + soundExt)
+    # SOUNDS['die']    = pygame.mixer.Sound('assets/audio/die' + soundExt)
+    # SOUNDS['hit']    = pygame.mixer.Sound('assets/audio/hit' + soundExt)
+    # SOUNDS['point']  = pygame.mixer.Sound('assets/audio/point' + soundExt)
+    # SOUNDS['swoosh'] = pygame.mixer.Sound('assets/audio/swoosh' + soundExt)
+    # SOUNDS['wing']   = pygame.mixer.Sound('assets/audio/wing' + soundExt)
 
     # select random background sprites
     IMAGES['background'] = pygame.image.load(BACKGROUND_PATH).convert()
@@ -75,7 +75,7 @@ def load():
         getHitmask(IMAGES['player'][2]),
     )
 
-    return IMAGES, SOUNDS, HITMASKS
+    return IMAGES, HITMASKS
 
 def getHitmask(image):
     """returns a hitmask using an image's alpha."""
