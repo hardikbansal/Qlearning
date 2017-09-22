@@ -8,7 +8,7 @@ from pygame.locals import *
 from itertools import cycle
 import os
 
-os.environ["SDL_VIDEODRIVER"] = "dummy"
+# os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 FPS = 30
 SCREENWIDTH  = 288

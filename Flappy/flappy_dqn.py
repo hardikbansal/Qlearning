@@ -225,7 +225,7 @@ class flappy():
 	def play(self):
 
 
-		for i in range(self.num_episodes):
+		for i in range(1):
 
 			game_state = game.GameState()
 
@@ -264,8 +264,8 @@ class flappy():
 def main():
 
 	model = flappy()
-	model.train()
-	# model.play()
+	# model.train()
+	model.play()
 
 if __name__ == "__main__":
 	main()
