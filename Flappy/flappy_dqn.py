@@ -53,9 +53,9 @@ class flappy():
 
 		# Defining the hyper parameters
 
-		self.img_width = 288
-		self.img_height = 512
-		self.img_depth = 3
+		self.img_width = 80
+		self.img_height = 80
+		self.img_depth = 4
 		self.img_size = self.img_width*self.img_height*self.img_depth
 		self.eps = 0.5
 
@@ -115,7 +115,7 @@ class flappy():
 
 		self.model()
 
-		sys.exit()
+		#sys.exit()
 		
 		init = tf.global_variables_initializer()
 
@@ -144,12 +144,12 @@ class flappy():
 					action[temp_action] = 1
 					new_state, reward, done = env.frame_step(action)
 
-					temp_img = pre_process(new_state)
+					temp_img = self.pre_process(new_state)
 					img_batch.insert(len(img_batch), temp_img)
-					img_batch.pop(0)
 
 					total_reward += reward
-
+				
+				# sys.exit()
 
 				for j in range(1, self.max_steps+1):
 
@@ -158,7 +158,7 @@ class flappy():
 					if temp < self.eps :
 						temp_action = random.randint(0,1)
 					else :
-						temp_weights = sess.run([self.main_net.output_weights], feed_dict={self.main_net.input_state:np.stack(img_batch,axis=2)})
+						temp_weights = sess.run([self.main_net.output_weights], feed_dict={self.main_net.input_state:np.reshape(np.stack(img_batch,axis=2),[-1, 80, 80, 4])})
 						temp_action = np.argmax(temp_weights)
 					
 					self.eps*=0.99
@@ -167,7 +167,7 @@ class flappy():
 					action[temp_action] = 1
 
 					new_state, reward, done = env.frame_step(action)
-					temp_img = pre_process(new_state)
+					temp_img = self.pre_process(new_state)
 
 					total_reward += reward
 
@@ -216,7 +216,7 @@ class flappy():
 					total_steps+=1
 				
 				print("Total rewards in episode " + str(i) + " is " + str(total_reward))
-			
+				sys.exit()
 			# for var in self.model_vars: print(var.name, sess.run(var.name))
 
 			self.play(sess)
@@ -264,8 +264,8 @@ class flappy():
 def main():
 
 	model = flappy()
-	# model.train()
-	model.play()
+	model.train()
+	#model.play()
 
 if __name__ == "__main__":
 	main()
