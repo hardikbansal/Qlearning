@@ -86,21 +86,21 @@ class flappy():
 
 		# Defining the model for the training
 
-		# self.target_reward = tf.placeholder(tf.float32, [None, 1], name="target_reward")
-		# self.action_list = tf.placeholder(tf.int32, [None, 1], name="action_list")
+		self.target_reward = tf.placeholder(tf.float32, [None, 1], name="target_reward")
+		self.action_list = tf.placeholder(tf.int32, [None, 1], name="action_list")
 
-		# observed_reward = tf.reduce_sum(self.main_net.output_weights*tf.one_hot(tf.reshape(self.action_list,[-1]),2,dtype=tf.float32),1,keep_dims=True)
+		observed_reward = tf.reduce_sum(self.main_net.output_weights*tf.one_hot(tf.reshape(self.action_list,[-1]),2,dtype=tf.float32),1,keep_dims=True)
 
-		# # print(self.target_reward.shape)
-		# # sys.exit()
+		# print(self.target_reward.shape)
+		# sys.exit()
 
-		# self.loss = tf.reduce_mean(tf.square(observed_reward - self.target_reward))
+		self.loss = tf.reduce_mean(tf.square(observed_reward - self.target_reward))
 
-		# optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.lr)
-		# self.loss_opt = optimizer.minimize(self.loss)
+		optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.lr)
+		self.loss_opt = optimizer.minimize(self.loss)
 
-		# self.model_vars = tf.trainable_variables()
-		# for var in self.model_vars: print(var.name)
+		self.model_vars = tf.trainable_variables()
+		for var in self.model_vars: print(var.name)
 
 	def pre_process(self, img):
 
@@ -173,7 +173,10 @@ class flappy():
 
 					# print(type(hist_buffer))
 
-					hist_buffer.append((img_batch, temp_action, reward, img_batch[1:].insert(4,temp_img), done))
+					new_img_batch = img_batch[1:]
+					new_img_batch.insert(3,temp_img)
+
+					hist_buffer.append((np.stack(img_batch, axis=2), temp_action, reward, np.stack(new_img_batch,axis=2), done))
 					
 					if(len(hist_buffer) >= 10000):
 						hist_buffer.pop(0)
@@ -191,7 +194,6 @@ class flappy():
 
 					if(total_steps > self.batch_size):
 
-						sys.exit()
 
 						rand_batch = random.sample(hist_buffer, self.batch_size)
 
@@ -200,7 +202,11 @@ class flappy():
 						action_hist = [m[1] for m in rand_batch]
 						next_state_hist = [m[3] for m in rand_batch]
 
-						temp_target_q = sess.run(self.main_net.output_weights, feed_dict={self.main_net.input_state:np.vstack(next_state_hist)})
+						# print(len(state_hist))
+
+						# sys.exit()
+
+						temp_target_q = sess.run(self.main_net.output_weights, feed_dict={self.main_net.input_state:np.stack(next_state_hist)})
 
 						# sys.exit()
 
@@ -210,7 +216,9 @@ class flappy():
 						
 						# print(action_hist.shape)
 
-						_ = sess.run(self.loss_opt, feed_dict={self.main_net.input_state:np.vstack(state_hist), self.target_reward:temp_target_reward, self.action_list:np.vstack(action_hist)})
+						_ = sess.run(self.loss_opt, feed_dict={self.main_net.input_state:np.vstack(state_hist), self.target_reward:temp_target_reward, self.action_list:np.stack(action_hist)})
+						
+						sys.exit()
 
 
 					total_steps+=1
