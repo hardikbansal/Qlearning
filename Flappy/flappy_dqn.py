@@ -225,7 +225,7 @@ class flappy():
 
 					total_steps+=1
 				
-				print("Total rewards in episode " + str(i) + " is " + str(total_reward))
+				print("Total reward in episode " + str(i) + " is " + str(total_reward))
 				# sys.exit()
 			# for var in self.model_vars: print(var.name, sess.run(var.name))
 
