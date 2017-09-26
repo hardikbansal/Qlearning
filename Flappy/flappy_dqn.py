@@ -57,13 +57,12 @@ class flappy():
 		self.img_height = 80
 		self.img_depth = 4
 		self.img_size = self.img_width*self.img_height*self.img_depth
-		self.eps = 0.5
+		self.eps = 0.1
 
-		self.num_episodes = 3000
-		self.max_steps = 1000
-		self.pre_train_steps = 10
+		self.num_episodes = 10000
+		self.pre_train_steps = 10000
 		self.update_freq = 100
-		self.batch_size = 10
+		self.batch_size = 32
 		self.gamma = 0.9
 		self.lr = 0.0001
 
@@ -151,7 +150,7 @@ class flappy():
 				
 				# sys.exit()
 
-				for j in range(1, self.max_steps+1):
+				while(True):
 
 					temp = random.random()
 					
@@ -161,7 +160,9 @@ class flappy():
 						temp_weights = sess.run([self.main_net.output_weights], feed_dict={self.main_net.input_state:np.reshape(np.stack(img_batch,axis=2),[-1, 80, 80, 4])})
 						temp_action = np.argmax(temp_weights)
 					
-					self.eps*=0.99
+					
+					if(total_steps > self.pre_train_steps):
+						self.eps = 0.99
 
 					action = np.zeros(2)
 					action[temp_action] = 1
@@ -178,7 +179,7 @@ class flappy():
 
 					hist_buffer.append((np.stack(img_batch, axis=2), temp_action, reward, np.stack(new_img_batch,axis=2), done))
 					
-					if(len(hist_buffer) >= 10000):
+					if(len(hist_buffer) >= 50000):
 						hist_buffer.pop(0)
 
 
@@ -192,7 +193,7 @@ class flappy():
 					if (done):
 						break
 
-					if(total_steps > self.batch_size):
+					if(total_steps > self.pre_train_steps):
 
 
 						rand_batch = random.sample(hist_buffer, self.batch_size)
@@ -214,17 +215,18 @@ class flappy():
 						temp_target_reward = reward_hist + self.gamma*temp_target_q
 						temp_target_reward =  np.reshape(temp_target_reward, [self.batch_size, 1])
 						
-						# print(action_hist.shape)
-
-						_ = sess.run(self.loss_opt, feed_dict={self.main_net.input_state:np.vstack(state_hist), self.target_reward:temp_target_reward, self.action_list:np.stack(action_hist)})
 						
-						sys.exit()
+						# print((action_hist))
+
+						_ = sess.run(self.loss_opt, feed_dict={self.main_net.input_state:np.stack(state_hist), self.target_reward:temp_target_reward, self.action_list:np.reshape(np.stack(action_hist),[self.batch_size, 1])})
+						
+						# sys.exit()
 
 
 					total_steps+=1
 				
 				print("Total rewards in episode " + str(i) + " is " + str(total_reward))
-				sys.exit()
+				# sys.exit()
 			# for var in self.model_vars: print(var.name, sess.run(var.name))
 
 			self.play(sess)
