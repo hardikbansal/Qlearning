@@ -4,18 +4,16 @@ import sys
 import random
 import time
 import imageio
+import gym
+import gym_ple
+
 
 from PIL import Image
 from scipy.misc import imresize
 
-sys.path.append('game/')
-sys.path.append('../')
-
-from layers import *
+env = gym.make('FlappyBird-v0')
 
 
-
-import wrapped_flappy_bird as game
 
 class network():
 
@@ -65,6 +63,7 @@ class flappy():
 		self.batch_size = 32
 		self.gamma = 0.9
 		self.lr = 0.0001
+		self.max_steps = 10000
 
 	def copy_network(self, net1, net2):
 
@@ -234,45 +233,28 @@ class flappy():
 
 	def play(self):
 
-
 		for i in range(1):
 
-			game_state = game.GameState()
-
-			# sys.exit()
-
-			# frames = []
-			# num_frames = 0
+			curr_state = env.reset()
+			env.render()
 
 			total_steps = 0
 
-			for j in range(100):
+			for j in range(self.max_steps):
 				
 				temp = random.randint(0,1)
 				action = np.zeros([2])
 				action[temp] = 1
-				new_state, reward, done = game_state.frame_step(action)
+				new_state, reward, done, _ = env.step(temp)
 
 				total_steps += 1
 				
-				# print(new_state)
-				# frames.insert(num_frames, Image.fromarray(np.uint8(new_state)))
-				# num_frames+=1
-
 				if done:
 					break
 
-			print(total_steps)
+			print("Total Steps ", str(total_steps))
+
 			sys.exit()
-
-
-
-
-
-
-
-
-
 
 
 
