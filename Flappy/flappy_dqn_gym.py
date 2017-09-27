@@ -132,15 +132,13 @@ class flappy():
 
 				# print("Started the episode " + str(i))
 
-				env = game.GameState()
+				curr_state = env.reset()
 				img_batch = []
 				total_reward = 0
 
 				for j in range(4):
 					temp_action = random.randint(0,1)
-					action = np.zeros(2)
-					action[temp_action] = 1
-					new_state, reward, done = env.frame_step(action)
+					new_state, reward, done, _ = env.step(temp_action)
 
 					temp_img = self.pre_process(new_state)
 					img_batch.insert(len(img_batch), temp_img)
@@ -163,10 +161,7 @@ class flappy():
 					if(total_steps > self.pre_train_steps):
 						self.eps = 0.99
 
-					action = np.zeros(2)
-					action[temp_action] = 1
-
-					new_state, reward, done = env.frame_step(action)
+					new_state, reward, done, _ = env.step(temp_action)
 					temp_img = self.pre_process(new_state)
 
 					total_reward += reward
@@ -193,7 +188,6 @@ class flappy():
 						break
 
 					if(total_steps > self.pre_train_steps):
-
 
 						rand_batch = random.sample(hist_buffer, self.batch_size)
 
@@ -225,7 +219,7 @@ class flappy():
 					total_steps+=1
 				
 				print("Total rewards in episode " + str(i) + " is " + str(total_reward))
-				# sys.exit()
+				sys.exit()
 			# for var in self.model_vars: print(var.name, sess.run(var.name))
 
 			self.play(sess)
