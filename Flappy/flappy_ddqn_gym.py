@@ -84,11 +84,11 @@ class flappy():
 	def model(self):
 
 		self.main_net = network(self.img_width, self.img_height, name="main_net")
-		# self.target_net = network(self.img_width, self.img_height, name="target_net")
+		self.target_net = network(self.img_width, self.img_height, name="target_net")
 
 		# Initialising the Networks
 		self.main_net.net()
-		# self.target_net.net()
+		self.target_net.net()
 
 		# Defining the model for the training
 
@@ -130,7 +130,7 @@ class flappy():
 
 			sess.run(init)
 			print("Initialized the model")
-			# self.copy_network(self.main_net, self.target_net)
+			self.copy_network(self.main_net, self.target_net)
 			
 			total_steps = 0
 			total_reward_list = []
@@ -208,7 +208,7 @@ class flappy():
 
 						# sys.exit()
 
-						temp_target_q = sess.run(self.main_net.output_weights, feed_dict={self.main_net.input_state:np.stack(next_state_hist)})
+						temp_target_q = sess.run(self.target_net.output_weights, feed_dict={self.target_net.input_state:np.stack(next_state_hist)})
 
 						# sys.exit()
 
@@ -216,13 +216,14 @@ class flappy():
 						temp_target_reward = reward_hist + self.gamma*temp_target_q
 						temp_target_reward =  np.reshape(temp_target_reward, [self.batch_size, 1])
 						
-						
 						# print((action_hist))
 
 						_ = sess.run(self.loss_opt, feed_dict={self.main_net.input_state:np.stack(state_hist), self.target_reward:temp_target_reward, self.action_list:np.reshape(np.stack(action_hist),[self.batch_size, 1])})
 						
 						# sys.exit()
 
+						if(total_steps%self.update_freq == 0):
+							self.copy_network(self.main_net, self.target_net)
 
 					total_steps+=1
 				
