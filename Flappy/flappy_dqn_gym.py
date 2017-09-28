@@ -241,6 +241,16 @@ class flappy():
 				action[temp] = 1
 				new_state, reward, done, _ = env.step(temp)
 
+				img = Image.fromarray(new_state.astype(np.uint8))
+				img.save('temp.jpeg')
+
+				temp_img = self.pre_process(new_state)
+
+				img = Image.fromarray(temp_img.astype(np.uint8))
+				img.save('temp1.jpeg')
+
+				print(new_state.shape)
+
 				total_steps += 1
 				
 				if done:
