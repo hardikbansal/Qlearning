@@ -27,10 +27,11 @@ class actor_network():
 		self.h1_actor_size = h1_actor_size
 		self.h2_actor_size = h2_actor_size
 
+		# Critic latent Variables
+
 		self.h2_critic_size = h2_critic_size
 		self.h1_critic_size = h1_critic_size
 
-		# Critic latent Variables
 
 	def net(self):
 
@@ -41,7 +42,7 @@ class actor_network():
 			h1_actor = tf.nn.relu(linear1d(self.input_state, self.state_size, self.h1_actor_size, name="hidden1"))
 			h2_actor = tf.nn.relu(linear1d(h1_actor, self.h1_actor_size, self.h2_actor_size, name="hidden2"))
 
-			self.values_actor = tf.nn.tanh(linear1d(h2_actor, self.h2_actor_size, self.action_size, name="final"))
+			self.out_action = tf.nn.tanh(linear1d(h2_actor, self.h2_actor_size, self.action_size, name="final"))
 
 		with tf.variable_scope(self.name + "_critic") as scope:
 
@@ -86,11 +87,9 @@ class dqn():
 	def model(self):
 
 		self.main_net = network(self.state_size, self.action_size, name="main_net")
-		# self.target_net = network(self.state_size, self.action_size, name="target_net")
 
 		# Initialising the Networks
 		self.main_net.net()
-		# self.target_net.net()
 
 		# Defining the model for the training
 
@@ -99,9 +98,6 @@ class dqn():
 
 		observed_reward = tf.reduce_sum(self.main_net.output_weights*tf.one_hot(tf.reshape(self.action_list,[-1]),2,dtype=tf.float32),1,keep_dims=True)
 
-		# print(self.target_reward.shape)
-		# sys.exit()
-
 		self.loss = tf.reduce_mean(tf.square(observed_reward - self.target_reward))
 
 		optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.lr)
@@ -109,6 +105,21 @@ class dqn():
 
 		self.model_vars = tf.trainable_variables()
 		for var in self.model_vars: print(var.name)
+
+
+	def policy(self, algo="e_greedy", env, sess, state):
+
+		if(algo == "e_greedy"):
+
+			temp = random.random()
+
+			if temp < self.eps :
+				temp_action = [env.action_space.sample()]
+			else :
+				temp_action = sess.run([self.main_net.out_action], feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
+				# print(temp_weights)
+
+		return temp_action
 
 
 	def train(self):
@@ -124,7 +135,6 @@ class dqn():
 
 			sess.run(init)
 			print("Initialized the model")
-			# self.copy_network(self.main_net, self.target_net)
 			
 			total_steps = 0
 			total_reward_list = []
@@ -144,21 +154,20 @@ class dqn():
 					if temp < self.eps :
 						temp_action = [env.action_space.sample()]
 					else :
-						# print("I am here")
-						temp_action, temp_weights = sess.run([self.main_net.out_action, self.main_net.output_weights], feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
+						temp_action = sess.run([self.main_net.out_action], feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
 						# print(temp_weights)
 					
 					self.eps*=0.99
-
 					new_state, reward, done, _ = env.step(temp_action[0])
-
 					total_reward += reward
+					
 					if(done):
 						reward = -100
 
 					# print(type(hist_buffer))
 
 					hist_buffer.append((curr_state, temp_action[0], reward, new_state, done))
+					
 					if(len(hist_buffer) >= 10000):
 						hist_buffer.pop(0)
 
@@ -178,11 +187,9 @@ class dqn():
 						action_hist = [m[1] for m in rand_batch]
 						next_state_hist = [m[3] for m in rand_batch]
 
-						temp_target_q = sess.run(self.main_net.output_weights, feed_dict={self.main_net.input_state:np.vstack(next_state_hist)})
-
+						temp_action = sess.run(self.main_net.out_action, feed_dict={self.main_net.input_state:np.vstack(next_state_hist)})
+						temp_target_q = sess.run(self.main_net.q_value, feed_dict={self.main_net.input_state:np.vstack(next_state_hist), self.main_net.action:temp_action})
 						# sys.exit()
-
-						temp_target_q = np.amax(temp_target_q,1)
 						temp_target_reward = reward_hist + self.gamma*temp_target_q
 						temp_target_reward =  np.reshape(temp_target_reward, [self.batch_size, 1])
 						
@@ -216,27 +223,30 @@ class dqn():
 
 	def play(self, sess, method="random"):
 
-		# self.model()
 		env = gym.make('Pendulum-v0')
 
-		# init = tf.global_variables_initializer()
-
-		# for var in self.model_vars: print(var.name, sess.run(var.name))
-
 		for i in range(10):
+			
 			curr_state = env.reset()
 			total_reward = 0
+
 			for j in range(self.max_steps):
+
 				env.render()
+
 				if(method == "random"):
 					action = [env.action_space.sample()]
 				else :
 					action = sess.run(self.main_net.out_action, feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
+				
 				new_state, reward, done, _ = env.step(action[0])
+				
 				if(done == True):
 					break
+				
 				total_reward += reward
 				curr_state = new_state
+			
 			print("Total rewards in testing step " + str(i) + " are " + str(total_reward))
 
 
