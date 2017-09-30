@@ -14,28 +14,48 @@ from gym import wrappers
 
 
 
-class network():
+class actor_network():
 
-	def __init__(self, state_size, action_size, h1_size=128, h2_size=128, name="network"):
+	def __init__(self, state_size, action_size, h1_size=400, h2_size=300, name="actor_network"):
 
 		self.state_size = state_size
 		self.action_size = action_size
 		self.name = name
-		self.h1_size = h1_size
-		self.h2_size = h2_size
+
+		# Actor latent variables
+		
+		self.h1_actor_size = h1_actor_size
+		self.h2_actor_size = h2_actor_size
+
+		self.h2_critic_size = h2_critic_size
+		self.h1_critic_size = h1_critic_size
+
+		# Critic latent Variables
 
 	def net(self):
 
-		with tf.variable_scope(self.name) as scope:
+		self.input_state = tf.placeholder(tf.float32, [None, self.state_size], name="input_state")
+		
+		with tf.variable_scope(self.name + "_actor") as scope:
 
-			self.input_state = tf.placeholder(tf.float32, [None, self.state_size], name="input_state")
+			h1_actor = tf.nn.relu(linear1d(self.input_state, self.state_size, self.h1_actor_size, name="hidden1"))
+			h2_actor = tf.nn.relu(linear1d(h1_actor, self.h1_actor_size, self.h2_actor_size, name="hidden2"))
 
-			h1 = tf.nn.tanh(linear1d(self.input_state, self.state_size, self.h1_size, name="hidden1"))
-			h2 = tf.nn.tanh(linear1d(h1, self.h1_size, self.h2_size, name="hidden2"))
+			self.values_actor = tf.nn.tanh(linear1d(h2_actor, self.h2_actor_size, self.action_size, name="final"))
 
-			self.output_weights = linear1d(h2, self.h2_size, self.action_size, name="final")
+		with tf.variable_scope(self.name + "_critic") as scope:
 
-			self.out_action = tf.argmax(self.output_weights, 1)
+			self.action = tf.placeholder(tf.float32, [None, self.action_size], name="action")
+
+			h1_critic = tf.nn.relu(linear1d(self.input_state, self.state_size, self.h1_critic_size, name="hidden1"))
+
+			weight_1 = tf.Variable(tf.truncated_normal([self.h1_critic_size, self.h2_critic_size], stddev=0.01), name="weight_1")
+			weight_2 = tf.Variable(tf.truncated_normal([self.action_size, self.h2_critic_size], stddev=0.01), name="weight_2")
+			bias = tf.Variable(tf.zeros([self.h2_critic_size]), name="bias")
+
+			h2_critic = tf.matmul(h1_critic, weight_1) + tf.matmul(action, weight_2) + bias
+
+			self.q_value = linear1d(h2_critic, self.h2_critic_size, 1, name="final")
 
 class dqn():
 
@@ -94,8 +114,7 @@ class dqn():
 	def train(self):
 
 
-		env = gym.make('CartPole-v0')
-
+		env = gym.make('Pendulum-v0')
 
 		self.model()
 
@@ -192,13 +211,13 @@ class dqn():
 			
 			# for var in self.model_vars: print(var.name, sess.run(var.name))
 
-			self.play(sess)
+			self.play(sess, method="trained")
 
 
-	def play(self, sess):
+	def play(self, sess, method="random"):
 
 		# self.model()
-		env = gym.make('CartPole-v0')
+		env = gym.make('Pendulum-v0')
 
 		# init = tf.global_variables_initializer()
 
@@ -209,7 +228,10 @@ class dqn():
 			total_reward = 0
 			for j in range(self.max_steps):
 				env.render()
-				action = sess.run(self.main_net.out_action, feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
+				if(method == "random"):
+					action = [env.action_space.sample()]
+				else :
+					action = sess.run(self.main_net.out_action, feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
 				new_state, reward, done, _ = env.step(action[0])
 				if(done == True):
 					break
@@ -221,9 +243,9 @@ class dqn():
 
 def main():
 
-	model = dqn(4,2)
-	model.train()
-	# model.play()
+	model = dqn(3,2)
+	# model.train()
+	model.play(None)
 
 if __name__ == "__main__":
 	main()
