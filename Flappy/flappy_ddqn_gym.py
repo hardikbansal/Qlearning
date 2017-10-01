@@ -112,7 +112,7 @@ class flappy():
 
 		grey_matrix = np.array([0.2125, 0.7154, 0.0721])
 		new_img = np.dot(img, grey_matrix)
-		new_img = imresize(new_img, [80, 80])
+		new_img = imresize(new_img, [80, 80], interp='bilinear')
 		return new_img
 
 
@@ -271,8 +271,8 @@ class flappy():
 def main():
 
 	model = flappy()
-	model.train()
-	# model.play()
+	# model.train()
+	model.play()
 
 if __name__ == "__main__":
 	main()

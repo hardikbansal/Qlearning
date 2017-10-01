@@ -14,9 +14,9 @@ from gym import wrappers
 
 
 
-class actor_network():
+class network():
 
-	def __init__(self, state_size, action_size, h1_size=400, h2_size=300, name="actor_network"):
+	def __init__(self, state_size, action_size, h1_actor_size=400, h2_actor_size=300, h1_critic_size=400, h2_critic_size=300, name="actor_network"):
 
 		self.state_size = state_size
 		self.action_size = action_size
@@ -42,7 +42,8 @@ class actor_network():
 			h1_actor = tf.nn.relu(linear1d(self.input_state, self.state_size, self.h1_actor_size, name="hidden1"))
 			h2_actor = tf.nn.relu(linear1d(h1_actor, self.h1_actor_size, self.h2_actor_size, name="hidden2"))
 
-			self.out_action = tf.nn.tanh(linear1d(h2_actor, self.h2_actor_size, self.action_size, name="final"))
+			temp_out_action = tf.nn.tanh(linear1d(h2_actor, self.h2_actor_size, self.action_size, name="final"))
+			self.out_action = temp_out_action*2
 
 		with tf.variable_scope(self.name + "_critic") as scope:
 
@@ -54,7 +55,7 @@ class actor_network():
 			weight_2 = tf.Variable(tf.truncated_normal([self.action_size, self.h2_critic_size], stddev=0.01), name="weight_2")
 			bias = tf.Variable(tf.zeros([self.h2_critic_size]), name="bias")
 
-			h2_critic = tf.matmul(h1_critic, weight_1) + tf.matmul(action, weight_2) + bias
+			h2_critic = tf.matmul(h1_critic, weight_1) + tf.matmul(self.action, weight_2) + bias
 
 			self.q_value = linear1d(h2_critic, self.h2_critic_size, 1, name="final")
 
@@ -96,19 +97,18 @@ class dqn():
 		self.target_reward = tf.placeholder(tf.float32, [None, 1], name="target_reward")
 		self.action_list = tf.placeholder(tf.int32, [None, 1], name="action_list")
 
-		observed_reward = tf.reduce_sum(self.main_net.output_weights*tf.one_hot(tf.reshape(self.action_list,[-1]),2,dtype=tf.float32),1,keep_dims=True)
+		# observed_reward = tf.reduce_sum(self.main_net.output_weights*tf.one_hot(tf.reshape(self.action_list,[-1]),2,dtype=tf.float32),1,keep_dims=True)
 
-		self.loss = tf.reduce_mean(tf.square(observed_reward - self.target_reward))
+		# self.loss = tf.reduce_mean(tf.square(observed_reward - self.target_reward))
 
-		optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.lr)
-		self.loss_opt = optimizer.minimize(self.loss)
+		# optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.lr)
+		# self.loss_opt = optimizer.minimize(self.loss)
 
-		self.model_vars = tf.trainable_variables()
-		for var in self.model_vars: print(var.name)
+		# self.model_vars = tf.trainable_variables()
+		# for var in self.model_vars: print(var.name)
 
 
-	def policy(self, algo="e_greedy", env, sess, state):
-
+	def policy(self, env, sess, state, algo="e_greedy"):
 		if(algo == "e_greedy"):
 
 			temp = random.random()
@@ -150,20 +150,21 @@ class dqn():
 				for j in range(1, self.max_steps+1):
 
 					temp = random.random()
-					
+
+					print(temp)
+
 					if temp < self.eps :
 						temp_action = [env.action_space.sample()]
 					else :
 						temp_action = sess.run([self.main_net.out_action], feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
-						# print(temp_weights)
-					
+						# print(temp_action)
+						# sys.exit()
+
 					self.eps*=0.99
 					new_state, reward, done, _ = env.step(temp_action[0])
 					total_reward += reward
-					
-					if(done):
-						reward = -100
 
+					# print(reward)
 					# print(type(hist_buffer))
 
 					hist_buffer.append((curr_state, temp_action[0], reward, new_state, done))
@@ -176,6 +177,7 @@ class dqn():
 					if (done):
 						break
 
+					# sys.exit()
 					if(total_steps > self.batch_size):
 
 						# print("Training the network")
@@ -253,9 +255,9 @@ class dqn():
 
 def main():
 
-	model = dqn(3,2)
-	# model.train()
-	model.play(None)
+	model = dqn(3,1)
+	model.train()
+	# model.play(None)
 
 if __name__ == "__main__":
 	main()
