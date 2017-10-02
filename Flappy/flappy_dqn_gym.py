@@ -21,8 +21,6 @@ from scipy.misc import imresize
 
 env = gym.make('FlappyBird-v0')
 
-
-
 class network():
 
 	def __init__(self, img_width, img_height, name="network"):
@@ -42,14 +40,12 @@ class network():
 			o_c3 = general_conv2d(o_c1, 64, 3, 3, 1, 1, padding="SAME", do_norm=False, name="conv3")
 
 			shape = o_c3.get_shape().as_list()
-
 			o_c3 = tf.reshape(o_c3,[-1, shape[1]*shape[2]*shape[3]])
-
 			shape = o_c3.get_shape().as_list()
 
 			o_l1 = linear1d(o_c3, shape[1], 512)
 
-			self.output_weights = linear1d(o_l1, 512, 2)
+			self.q_values = linear1d(o_l1, 512, 2)
 
 
 
@@ -84,18 +80,18 @@ class flappy():
 	def model(self):
 
 		self.main_net = network(self.img_width, self.img_height, name="main_net")
-		# self.target_net = network(self.img_width, self.img_height, name="target_net")
+		self.target_net = network(self.img_width, self.img_height, name="target_net")
 
 		# Initialising the Networks
 		self.main_net.net()
-		# self.target_net.net()
+		self.target_net.net()
 
 		# Defining the model for the training
 
 		self.target_reward = tf.placeholder(tf.float32, [None, 1], name="target_reward")
 		self.action_list = tf.placeholder(tf.int32, [None, 1], name="action_list")
 
-		observed_reward = tf.reduce_sum(self.main_net.output_weights*tf.one_hot(tf.reshape(self.action_list,[-1]),2,dtype=tf.float32),1,keep_dims=True)
+		observed_reward = tf.reduce_sum(self.main_net.q_values*tf.one_hot(tf.reshape(self.action_list,[-1]),2,dtype=tf.float32),1,keep_dims=True)
 
 		# print(self.target_reward.shape)
 		# sys.exit()
@@ -112,7 +108,7 @@ class flappy():
 
 		grey_matrix = np.array([0.2125, 0.7154, 0.0721])
 		new_img = np.dot(img, grey_matrix)
-		new_img = imresize(new_img, [80, 80], interp='lanczos')
+		new_img = imresize(new_img, [80, 80], interp='bilinear')
 		return new_img
 
 
@@ -120,8 +116,6 @@ class flappy():
 
 
 		self.model()
-
-		#sys.exit()
 		
 		init = tf.global_variables_initializer()
 
@@ -130,7 +124,7 @@ class flappy():
 
 			sess.run(init)
 			print("Initialized the model")
-			# self.copy_network(self.main_net, self.target_net)
+			self.copy_network(self.main_net, self.target_net)
 			
 			total_steps = 0
 			total_reward_list = []
@@ -152,8 +146,6 @@ class flappy():
 					img_batch.insert(len(img_batch), temp_img)
 
 					total_reward += reward
-				
-				# sys.exit()
 
 				while(True):
 
@@ -162,7 +154,7 @@ class flappy():
 					if temp < self.eps :
 						temp_action = random.randint(0,1)
 					else :
-						temp_weights = sess.run([self.main_net.output_weights], feed_dict={self.main_net.input_state:np.reshape(np.stack(img_batch,axis=2),[-1, 80, 80, 4])})
+						temp_weights = sess.run([self.main_net.q_values], feed_dict={self.main_net.input_state:np.reshape(np.stack(img_batch,axis=2),[-1, 80, 80, 4])})
 						temp_action = np.argmax(temp_weights)
 					
 					
@@ -173,8 +165,6 @@ class flappy():
 					temp_img = self.pre_process(new_state)
 
 					total_reward += reward
-
-					# print(type(hist_buffer))
 
 					new_img_batch = img_batch[1:]
 					new_img_batch.insert(3,temp_img)
@@ -204,25 +194,19 @@ class flappy():
 						action_hist = [m[1] for m in rand_batch]
 						next_state_hist = [m[3] for m in rand_batch]
 
-						# print(len(state_hist))
-
-						# sys.exit()
-
-						temp_target_q = sess.run(self.main_net.output_weights, feed_dict={self.main_net.input_state:np.stack(next_state_hist)})
-
-						# sys.exit()
+						temp_target_q = sess.run(self.target_net.q_values, 
+							feed_dict={self.target_net.input_state:np.stack(next_state_hist)})
 
 						temp_target_q = np.amax(temp_target_q,1)
 						temp_target_reward = reward_hist + self.gamma*temp_target_q
 						temp_target_reward =  np.reshape(temp_target_reward, [self.batch_size, 1])
-						
-						
-						# print((action_hist))
 
-						_ = sess.run(self.loss_opt, feed_dict={self.main_net.input_state:np.stack(state_hist), self.target_reward:temp_target_reward, self.action_list:np.reshape(np.stack(action_hist),[self.batch_size, 1])})
-						
-						# sys.exit()
+						_ = sess.run(self.loss_opt, feed_dict={self.main_net.input_state:np.stack(state_hist), 
+							self.target_reward:temp_target_reward, 
+							self.action_list:np.reshape(np.stack(action_hist),[self.batch_size, 1])})
 
+						if(total_steps%self.update_freq == 0):
+							self.copy_network(self.main_net, self.target_net)
 
 					total_steps+=1
 				
