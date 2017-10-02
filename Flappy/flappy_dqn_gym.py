@@ -59,7 +59,7 @@ class flappy():
 		self.img_height = 80
 		self.img_depth = 4
 		self.img_size = self.img_width*self.img_height*self.img_depth
-		self.eps = 0.1
+		self.eps = 0.0001
 
 		self.num_episodes = 10000
 		self.pre_train_steps = 10000
@@ -136,7 +136,7 @@ class flappy():
 
 				curr_state = env.reset()
 				img_batch = []
-				total_reward = 0
+				total_reward = 0.0
 
 				for j in range(4):
 					temp_action = random.randint(0,1)
@@ -157,12 +157,13 @@ class flappy():
 						temp_weights = sess.run([self.main_net.q_values], feed_dict={self.main_net.input_state:np.reshape(np.stack(img_batch,axis=2),[-1, 80, 80, 4])})
 						temp_action = np.argmax(temp_weights)
 					
-					
-					if(total_steps > self.pre_train_steps):
-						self.eps = 0.99
-
 					new_state, reward, done, _ = env.step(temp_action)
 					temp_img = self.pre_process(new_state)
+
+					if(not done):
+						reward = 0.1
+					else :
+						reward = -1
 
 					total_reward += reward
 
@@ -174,7 +175,6 @@ class flappy():
 					if(len(hist_buffer) >= 50000):
 						hist_buffer.pop(0)
 
-
 					# Adding the image to the batch
 
 					img_batch.insert(len(img_batch), temp_img)
@@ -182,8 +182,6 @@ class flappy():
 
 					# Breaking the loop if the state is terminated
 
-					if (done):
-						break
 
 					if(total_steps > self.pre_train_steps):
 
@@ -208,10 +206,13 @@ class flappy():
 						if(total_steps%self.update_freq == 0):
 							self.copy_network(self.main_net, self.target_net)
 
+					if (done):
+						break
+
 					total_steps+=1
 				
-				print("Total rewards in episode " + str(i) + " is " + str(total_reward))
-				sys.exit()
+				print("Total rewards in episode " + str(i) + " is " + str(total_reward) + " total number of steps are " + str(total_steps))
+				# sys.exit()
 			# for var in self.model_vars: print(var.name, sess.run(var.name))
 
 	def play(self):
@@ -219,7 +220,6 @@ class flappy():
 		for i in range(1):
 
 			curr_state = env.reset()
-			env.render()
 
 			total_steps = 0
 
@@ -254,8 +254,8 @@ class flappy():
 def main():
 
 	model = flappy()
-	# model.train()
-	model.play()
+	model.train()
+	# model.play()
 
 if __name__ == "__main__":
 	main()
