@@ -36,14 +36,15 @@ class network():
 			self.input_state = tf.placeholder(tf.float32, [None, self.img_width, self.img_height, 4], name="input_state")
 
 			o_c1 = general_conv2d(self.input_state, 32, 8, 8, 4, 4, padding="SAME", do_norm=False, name="conv1")
+			o_c1 = tf.nn.max_pool(o_c1, ksize = [1, 2, 2, 1], strides = [1, 2, 2, 1], padding = "SAME")
 			o_c2 = general_conv2d(o_c1, 64, 4, 4, 2, 2, padding="SAME", do_norm=False, name="conv2")
-			o_c3 = general_conv2d(o_c1, 64, 3, 3, 1, 1, padding="SAME", do_norm=False, name="conv3")
+			o_c3 = general_conv2d(o_c2, 64, 3, 3, 1, 1, padding="SAME", do_norm=False, name="conv3")
 
 			shape = o_c3.get_shape().as_list()
 			o_c3 = tf.reshape(o_c3,[-1, shape[1]*shape[2]*shape[3]])
 			shape = o_c3.get_shape().as_list()
 
-			o_l1 = linear1d(o_c3, shape[1], 512)
+			o_l1 = tf.nn.relu(linear1d(o_c3, shape[1], 512))
 
 			self.q_values = linear1d(o_l1, 512, 2)
 
@@ -93,9 +94,6 @@ class flappy():
 
 		observed_reward = tf.reduce_sum(self.main_net.q_values*tf.one_hot(tf.reshape(self.action_list,[-1]),2,dtype=tf.float32),1,keep_dims=True)
 
-		# print(self.target_reward.shape)
-		# sys.exit()
-
 		self.loss = tf.reduce_mean(tf.square(observed_reward - self.target_reward))
 
 		optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.lr)
@@ -106,11 +104,15 @@ class flappy():
 
 	def pre_process(self, img):
 
-		grey_matrix = np.array([0.2125, 0.7154, 0.0721])
-		new_img = np.dot(img, grey_matrix)
-		new_img = imresize(new_img, [80, 80], interp='bilinear')
-		return new_img
+		# grey_matrix = np.array([0.2125, 0.7154, 0.0721])
+		# new_img = np.dot(img, grey_matrix)
+		# new_img = imresize(new_img, [80, 80], interp='bilinear')
+		# return new_img
 
+		x_t = cv2.cvtColor(cv2.resize(img, (80, 80)), cv2.COLOR_BGR2GRAY)
+		ret, x_t = cv2.threshold(x_t,1,255,cv2.THRESH_BINARY)
+
+		return x_t
 
 	def train(self):
 
@@ -152,6 +154,7 @@ class flappy():
 					temp = random.random()
 					
 					if temp < self.eps :
+						print("I am here")
 						temp_action = random.randint(0,1)
 					else :
 						temp_weights = sess.run([self.main_net.q_values], feed_dict={self.main_net.input_state:np.reshape(np.stack(img_batch,axis=2),[-1, 80, 80, 4])})
