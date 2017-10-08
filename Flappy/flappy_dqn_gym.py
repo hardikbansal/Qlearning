@@ -1,16 +1,14 @@
 import tensorflow as tf
 import numpy as np
-
 import sys
 import os
-
 import random
 import time
-
 import imageio
-import gym
-import gym_ple
+import cv2
 
+sys.path.append("game/")
+import wrapped_flappy_bird as game
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../utils"))
 
@@ -19,7 +17,6 @@ from layers import *
 from PIL import Image
 from scipy.misc import imresize
 
-env = gym.make('FlappyBird-v0')
 
 class network():
 
@@ -80,13 +77,6 @@ class flappy():
 
 	def model(self):
 
-		self.main_net = network(self.img_width, self.img_height, name="main_net")
-		self.target_net = network(self.img_width, self.img_height, name="target_net")
-
-		# Initialising the Networks
-		self.main_net.net()
-		self.target_net.net()
-
 		# Defining the model for the training
 
 		self.target_reward = tf.placeholder(tf.float32, [None, 1], name="target_reward")
@@ -104,24 +94,38 @@ class flappy():
 
 	def pre_process(self, img):
 
-		# grey_matrix = np.array([0.2125, 0.7154, 0.0721])
-		# new_img = np.dot(img, grey_matrix)
-		# new_img = imresize(new_img, [80, 80], interp='bilinear')
-		# return new_img
-
 		x_t = cv2.cvtColor(cv2.resize(img, (80, 80)), cv2.COLOR_BGR2GRAY)
 		ret, x_t = cv2.threshold(x_t,1,255,cv2.THRESH_BINARY)
 
 		return x_t
 
+	def policy(self, sess, algo):
+
+		if(algo == "e_greedy"):
+			
+			temp = random.random()
+			
+			if temp < self.eps :
+				temp_action = random.randint(0,1)
+			else :
+				temp_q_values = sess.run([self.main_net.q_values],
+					feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
+				temp_action = np.argmax(temp_q_values)
+
+			return temp_action
+
 	def train(self):
 
+		self.main_net = network(self.img_width, self.img_height, name="main_net")
+		self.target_net = network(self.img_width, self.img_height, name="target_net")
 
-		self.model()
-		
+		# Initialising the Networks
+		self.main_net.net()
+		self.target_net.net()
+
+		self.model()		
 		init = tf.global_variables_initializer()
 
-		
 		with tf.Session() as sess:
 
 			sess.run(init)
@@ -136,37 +140,30 @@ class flappy():
 
 				# Adding initial 4 frames to the image buffer array
 
-				curr_state = env.reset()
+				game_state = game.GameState()
 				img_batch = []
 				total_reward = 0.0
 
-				for j in range(4):
-					temp_action = random.randint(0,1)
-					new_state, reward, done, _ = env.step(temp_action)
-
-					temp_img = self.pre_process(new_state)
-					img_batch.insert(len(img_batch), temp_img)
-
-					total_reward += reward
+				temp_action = random.randint(0,1)
+				action = np.zeros([2])
+				action[temp_action] = 1
+				new_state, reward, done = game_state.frame_step(action)
+				
+				temp_img = self.pre_process(new_state)
+				img_batch = [temp_img]*4
 
 				while(True):
 
-					temp = random.random()
-					
-					if temp < self.eps :
-						print("I am here")
+					if (total_steps < 10000):
 						temp_action = random.randint(0,1)
 					else :
-						temp_weights = sess.run([self.main_net.q_values], feed_dict={self.main_net.input_state:np.reshape(np.stack(img_batch,axis=2),[-1, 80, 80, 4])})
-						temp_action = np.argmax(temp_weights)
+						self.policy(sess, "e_greedy")
 					
-					new_state, reward, done, _ = env.step(temp_action)
+					action = np.zeros([2])
+					action[temp_action] = 1
+					new_state, reward, done = game_state.frame_step(action)
+					
 					temp_img = self.pre_process(new_state)
-
-					if(not done):
-						reward = 0.1
-					else :
-						reward = -1
 
 					total_reward += reward
 
@@ -218,47 +215,67 @@ class flappy():
 				# sys.exit()
 			# for var in self.model_vars: print(var.name, sess.run(var.name))
 
-	def play(self):
+	def play(self, mode="random"):
 
-		for i in range(1):
+		init = tf.global_variables_initializer()
 
-			curr_state = env.reset()
+		with tf.Session() as sess:
 
-			total_steps = 0
+			sess.run(init)
 
-			for j in range(self.max_steps):
-				
-				temp = random.randint(0,1)
+			for i in range(1):
+
+				writer = imageio.get_writer('gif/demo.gif', mode='I')
+
+				game_state = game.GameState()
+				total_steps = 0
+				img_batch = []
+
 				action = np.zeros([2])
-				action[temp] = 1
-				new_state, reward, done, _ = env.step(temp)
-
-				img = Image.fromarray(new_state.astype(np.uint8))
-				img.save('temp.jpeg')
+				action[0] = 1
+				new_state, reward, done =  game_state.frame_step(action)
 
 				temp_img = self.pre_process(new_state)
 
-				img = Image.fromarray(temp_img.astype(np.uint8))
-				img.save('temp1.jpeg')
-
-				print(new_state.shape)
-
-				total_steps += 1
+				for j in range(4):
+					img_batch.insert(len(img_batch), temp_img)
 				
-				if done:
-					break
+				for j in range(self.max_steps):
 
-			print("Total Steps ", str(total_steps))
+					if(mode=="random"):
+						temp_action = random.randint(0,1)
+					else :
+						temp_weights = sess.run([self.main_net.q_values], feed_dict={self.main_net.input_state:np.reshape(np.stack(img_batch,axis=2),[-1, 80, 80, 4])})
+						temp_action = np.argmax(temp_weights)
+						print(temp_weights)
+						
+					action = np.zeros([2])
+					action[temp_action] = 1
 
-			sys.exit()
+					new_state, reward, done =  game_state.frame_step(action)
 
+					temp_new_state = np.flip(np.rot90(new_state, k=1, axes=(1,0)), 1)
 
+					temp_img = self.pre_process(new_state)
+					img_batch.insert(0, temp_img)
+					img_batch.pop(len(img_batch)-1)
+
+					print(temp_action)
+
+					total_steps += 1
+					
+					if done:
+						break
+
+				print("Total Steps ", str(total_steps))
+
+				sys.exit()
 
 def main():
 
-	model = flappy()
-	model.train()
-	# model.play()
+	mod = flappy()
+	# model.train()
+	mod.play("random")
 
 if __name__ == "__main__":
 	main()
