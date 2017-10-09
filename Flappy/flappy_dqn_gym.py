@@ -56,24 +56,23 @@ class flappy():
 		self.img_width = 80
 		self.img_height = 80
 		self.img_depth = 4
-		self.img_size = self.img_width*self.img_height*self.img_depth
-		self.eps = 0.0001
+		self.eps = 0.1
 
 		self.num_episodes = 10000
 		self.pre_train_steps = 10000
 		self.update_freq = 100
 		self.batch_size = 32
-		self.gamma = 0.9
-		self.lr = 0.0001
+		self.gamma = 0.99
+		self.lr = 0.000001
 		self.max_steps = 10000
 
-	def copy_network(self, net1, net2):
+	def copy_network(self, net1, net2, sess):
 
 		vars1 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, net1.name)
 		vars2 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, net2.name)
 
 		for idx in range(len(vars1)):
-			vars2[idx].assign(vars1[idx])
+			sess.run(vars2[idx].assign(vars1[idx]))
 
 	def model(self):
 
@@ -130,11 +129,13 @@ class flappy():
 
 			sess.run(init)
 			print("Initialized the model")
-			self.copy_network(self.main_net, self.target_net)
+			self.copy_network(self.main_net, self.target_net, sess)
 			
 			total_steps = 0
 			total_reward_list = []
 			hist_buffer = []
+
+			# sys.exit()
 
 			for i in range(self.num_episodes):
 
@@ -148,16 +149,21 @@ class flappy():
 				action = np.zeros([2])
 				action[temp_action] = 1
 				new_state, reward, done = game_state.frame_step(action)
+
+				total_steps+=1
 				
 				temp_img = self.pre_process(new_state)
 				img_batch = [temp_img]*4
+
+				# sys.exit()
 
 				while(True):
 
 					if (total_steps < 10000):
 						temp_action = random.randint(0,1)
+						# print("Temp action is "+ str(temp_action))
 					else :
-						self.policy(sess, "e_greedy")
+						temp_action = self.policy(sess, "e_greedy")
 					
 					action = np.zeros([2])
 					action[temp_action] = 1
@@ -204,7 +210,7 @@ class flappy():
 							self.action_list:np.reshape(np.stack(action_hist),[self.batch_size, 1])})
 
 						if(total_steps%self.update_freq == 0):
-							self.copy_network(self.main_net, self.target_net)
+							self.copy_network(self.main_net, self.target_net, sess)
 
 					if (done):
 						break
@@ -274,8 +280,8 @@ class flappy():
 def main():
 
 	mod = flappy()
-	# model.train()
-	mod.play("random")
+	mod.train()
+	# mod.play("random")
 
 if __name__ == "__main__":
 	main()
