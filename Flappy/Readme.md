@@ -21,3 +21,6 @@ You need to have the following python dependencies installed before running the 
 If you have all these installed, you can run the training function as follow:
 
 ```python flappy_dqn_gym.py```
+
+
+This work is highly inspired from [yenchenlin](https://github.com/yenchenlin/DeepLearningFlappyBird).
