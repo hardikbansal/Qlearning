@@ -1,5 +1,7 @@
 # Flappy Bird using DQN
 
+<img src="./Images/demo.gif">
+
 To train the falppy bird, first you need to clone the repository
 
 ```git clone https://github.com/hardikbansal/Qlearning```
