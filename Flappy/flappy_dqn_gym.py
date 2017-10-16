@@ -98,7 +98,7 @@ class flappy():
 
 		return x_t
 
-	def policy(self, sess, algo):
+	def policy(self, sess, algo, img_batch):
 
 		if(algo == "e_greedy"):
 			
@@ -107,8 +107,8 @@ class flappy():
 			if temp < self.eps :
 				temp_action = random.randint(0,1)
 			else :
-				temp_q_values = sess.run([self.main_net.q_values],
-					feed_dict={self.main_net.input_state:np.reshape(curr_state,[-1, self.state_size])})
+				temp_q_values = sess.run([self.main_net.q_values], 
+					feed_dict={self.main_net.input_state:np.reshape(np.stack(img_batch,axis=2),[-1, 80, 80, 4])})
 				temp_action = np.argmax(temp_q_values)
 
 			return temp_action
@@ -159,11 +159,11 @@ class flappy():
 
 				while(True):
 
-					if (total_steps < 10000):
+					if (total_steps < 100):
 						temp_action = random.randint(0,1)
 						# print("Temp action is "+ str(temp_action))
 					else :
-						temp_action = self.policy(sess, "e_greedy")
+						temp_action = self.policy(sess, "e_greedy", img_batch)
 					
 					action = np.zeros([2])
 					action[temp_action] = 1
